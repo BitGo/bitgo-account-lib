@@ -26,17 +26,21 @@ export class TransactionBuilder extends BaseTransactionBuilder {
   }
 
   /**
-   * Parse transaction takes in raw JSON directly from the node.
+   * Validate and parse transaction takes in raw JSON directly from the node.
    * @param rawTransaction The Tron transaction in JSON format as returned by the Tron lib or a
    *     stringifyed version of such JSON.
    */
   protected fromImplementation(rawTransaction: TransactionReceipt | string): Transaction {
-    // TODO: add checks to ensure the raw_data, raw_data_hex, and txID are from the same transaction
+    let receipt: TransactionReceipt;
     if (typeof rawTransaction === 'string') {
-      const transaction = JSON.parse(rawTransaction);
-      return new Transaction(this._coinConfig, transaction);
+      receipt = JSON.parse(rawTransaction);
+    } else {
+      receipt = rawTransaction;
     }
-    return new Transaction(this._coinConfig, rawTransaction);
+    this.validateRawTransaction(receipt);
+    const transaction = new Transaction(this._coinConfig, receipt);
+    this.validateTransaction(transaction);
+    return transaction;
   }
 
   /**

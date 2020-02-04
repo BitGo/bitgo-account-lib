@@ -167,6 +167,7 @@ describe('Tron', function() {
 
     it('should catch an invalid id', () => {
       const txJson = JSON.stringify(InvalidIDTransaction);
+      // invalid error should throw from txBuilder.fromImplementation
       should.throws(() => txBuilder.from(txJson));
     });
   });

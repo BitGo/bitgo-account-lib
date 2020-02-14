@@ -171,9 +171,6 @@ describe('Tron', function() {
     it('should catch an invalid id', () => {
       const txJson = JSON.stringify(InvalidIDTransaction);
       should.throws(() => txBuilder.from(txJson));
-      // txBuilder.sign({ key: FirstPrivateKey });
-      // Build calls validateTransaction()
-      // should.throws(() => txBuilder.build());
     });
 
     it('should throw exception of wrong id', () => {
@@ -205,7 +202,6 @@ describe('Tron', function() {
       const txJson = UnsignedAccountPermissionUpdateContractTx;
       should.doesNotThrow(() => txBuilder.from(txJson));
     });
-    console.log
 
     it('should validate stringified JSON transaction', () => {
       const txJsonString = JSON.stringify(UnsignedBuildTransaction);

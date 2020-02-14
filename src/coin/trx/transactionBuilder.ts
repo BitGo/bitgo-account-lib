@@ -1,21 +1,22 @@
 import * as crypto from 'crypto';
 import BigNumber from 'bignumber.js';
 
-import { TransactionReceipt } from './iface';
+import { BaseCoin as CoinConfig } from '@bitgo/statics';
+import * as _ from 'lodash';
 import {
   SigningError,
   BuildTransactionError,
   InvalidTransactionError,
-  ExtendTransactionError, ParseTransactionError,
+  ExtendTransactionError,
+  ParseTransactionError,
 } from '../baseCoin/errors';
-import { Address } from './address';
 import { BaseKey } from '../baseCoin/iface';
-import { signTransaction, isBase58Address, decodeTransaction } from './utils';
-import { BaseCoin as CoinConfig } from '@bitgo/statics';
 import { BaseTransactionBuilder } from '../baseCoin';
+import { TransactionReceipt } from './iface';
+import { Address } from './address';
+import { signTransaction, isBase58Address, decodeTransaction } from './utils';
 import { Transaction } from './transaction';
-import { KeyPair } from "./keyPair";
-import * as _ from 'lodash';
+import { KeyPair } from './keyPair';
 
 /**
  * Tron transaction builder.
@@ -81,12 +82,12 @@ export class TransactionBuilder extends BaseTransactionBuilder {
   }
 
   /** @inheritdoc */
-  protected buildImplementation(): Transaction {
+  protected buildImplementation(): Promise<Transaction> {
     // This is a no-op since Tron transactions are built from
     if (!this.transaction.id) {
       throw new BuildTransactionError('A valid transaction must have an id');
     }
-    return this.transaction;
+    return Promise.resolve(this.transaction);
   }
 
   /**

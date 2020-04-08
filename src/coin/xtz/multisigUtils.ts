@@ -35,6 +35,17 @@ export function getMultisigTransferDataFromOperation(operation: TransactionOp): 
   // In multisig transactions, the wallet contract is the destination
   const from = operation.destination;
 
+  if (transferArgs[4].prim === 'SET_DELEGATE') {
+    return {
+      coin: 'mutez',
+      from,
+      to: transferArgs[2].args[1].string,
+      amount: '0',
+      fee,
+      counter,
+    };
+  }
+
   let accountTypeIndex;
   switch (accountType) {
     case 'IMPLICIT_ACCOUNT':
@@ -44,7 +55,7 @@ export function getMultisigTransferDataFromOperation(operation: TransactionOp): 
       accountTypeIndex = 5;
       break;
     default:
-      throw new Error('Invalid contract parameters');
+      throw new Error('Invalid contract parameters:' + accountType);
   }
 
   return {
@@ -92,9 +103,53 @@ export function singlesigTransactionOperation(
 }
 
 /**
+ * Create a multisig wallet delegation operation.
+ *
+ * @param {string} counter Source account next counter
+ * @param {string} source The account that will pay for fees, and in singlesig transactions, where
+ *        the funds are taken from
+ * @param {string} contractAddress If it is a multisig transfer, the smart contract address with the
+ *        funds to be transferred from
+ * @param {string} contractCounter If it is a multisig transfer, the smart contract counter to use
+ *        in the next transaction
+ * @param {string} delegationAddress An implicit address to delegate to
+ * @param {string[]} signatures signatures List of signatures authorizing the funds transfer form
+ *        the multisig wallet
+ * @param {string} fee Fees in mutez to pay by the source account
+ * @param {string} gasLimit Maximum amount in mutez to spend in gas fees
+ * @param {string} storageLimit Maximum amount in mutez to spend in storage fees
+ * @param {number} m The number of signers (owners) for the multisig wallet being used. Default is 3
+ * @returns {TransactionOp} A Tezos operation with a generic multisig delegation
+ */
+export function multisigDelegationOperation(
+  counter: string,
+  source: string,
+  contractAddress: string,
+  contractCounter: string,
+  delegationAddress: string,
+  signatures: IndexedSignature[],
+  fee: string = DEFAULT_FEE.TRANSFER.toString(),
+  gasLimit: string = DEFAULT_GAS_LIMIT.TRANSFER.toString(),
+  storageLimit: string = DEFAULT_STORAGE_LIMIT.TRANSFER.toString(),
+  m: number = DEFAULT_M,
+): TransactionOp {
+  const script = delegateToAccount(delegationAddress);
+  return {
+    kind: 'transaction',
+    source,
+    fee,
+    counter,
+    gas_limit: gasLimit,
+    storage_limit: storageLimit,
+    amount: '0', // Don't transfer any funds from he source account to the contract in multisig txs
+    destination: contractAddress,
+    parameters: genericMultisigParams(script, contractCounter, signatures, m),
+  };
+}
+
+/**
  * Create a multisig wallet transaction operation.
  *
- * @see {@link transactionOperation}
  * @param {string} counter Source account next counter
  * @param {string} source The account that will pay for fees, and in singlesig transactions, where
  *        the funds are taken from
@@ -125,6 +180,7 @@ export function multisigTransactionOperation(
   storageLimit: string = DEFAULT_STORAGE_LIMIT.TRANSFER.toString(),
   m: number = DEFAULT_M,
 ): TransactionOp {
+  const script = transferToAccount(destinationAddress, amount);
   return {
     kind: 'transaction',
     source,
@@ -134,23 +190,21 @@ export function multisigTransactionOperation(
     storage_limit: storageLimit,
     amount: '0', // Don't transfer any funds from he source account to the contract in multisig txs
     destination: contractAddress,
-    parameters: genericMultisigTransferParams(destinationAddress, amount, contractCounter, signatures, m),
+    parameters: genericMultisigParams(script, contractCounter, signatures, m),
   };
 }
 
 /**
  * Helper function to build the parameters to call the generic multisig smart contract with.
  *
- * @param {string} destinationAddress An implicit or originated address
- * @param {number} amount Number of Mutez to be transferred
+ * @param {object} script The script to run by the smart contract
  * @param {string} contractCounter Multisig contract counter number
  * @param {IndexedSignature[]} signatures List of transactions and their order
  * @param {number} m The multisig wallet total number of signers (owners)
  * @returns The parameters object
  */
-function genericMultisigTransferParams(
-  destinationAddress: string,
-  amount: string,
+function genericMultisigParams(
+  script: Record<string, any>,
   contractCounter: string,
   signatures: IndexedSignature[],
   m: number,
@@ -163,7 +217,7 @@ function genericMultisigTransferParams(
       args: [
         {
           prim: 'Pair',
-          args: [{ int: contractCounter }, { prim: 'Left', args: [transferToAccount(destinationAddress, amount)] }],
+          args: [{ int: contractCounter }, { prim: 'Left', args: [script] }],
         },
         transactionSignatures,
       ],
@@ -243,7 +297,7 @@ function buildSignatures(signatures: IndexedSignature[], existingSignatures = []
  * Helper function to build the Michelson script to be signed to transfer funds from a multisig
  * wallet.
  *
- * @param contractAddress The multisig smart contract address
+ * @param {string} contractAddress The multisig smart contract address
  * @param {string} destinationAddress The destination account address (implicit or originated)
  * @param {number} amount Number of mutez to transfer
  * @param {string} contractCounter Wallet counter to use in the transaction
@@ -255,13 +309,44 @@ export function genericMultisigDataToSign(
   amount: string,
   contractCounter: string,
 ) {
+  const script = transferToAccount(destinationAddress, amount);
+  return buildDataToSign(script, contractCounter, contractAddress);
+}
+
+/**
+ * Helper function to build the Michelson script to be signed to delegate funds from a multisig
+ * wallet to a baker.
+ *
+ * @param {string} contractAddress The multisig smart contract address
+ * @param {string} destinationAddress The destination account address (implicit or originated)
+ * @param {string} contractCounter Wallet counter to use in the transaction
+ * @returns A JSON representation of the Michelson script to sign and approve a transfer
+ */
+export function genericMultisigDelegationDataToSign(
+  contractAddress: string,
+  destinationAddress: string,
+  contractCounter: string,
+) {
+  const script = delegateToAccount(destinationAddress);
+  return buildDataToSign(script, contractCounter, contractAddress);
+}
+
+/**
+ * Generate the data to sign payload for a generic script.
+ *
+ * @param {object} script Script to run by the smart contract
+ * @param {string} contractCounter Wallet counter to use in the transaction
+ * @param {string} contractAddress The multisig smart contract address
+ * @returns A JSON representation of the Michelson script to sign and approve a transfer
+ */
+function buildDataToSign(script: Record<string, any>, contractCounter: string, contractAddress: string) {
   const data = {
     prim: 'Pair',
     args: [
       { int: contractCounter },
       {
         prim: 'Left',
-        args: [transferToAccount(destinationAddress, amount)],
+        args: [script],
       },
     ],
   };
@@ -331,7 +416,27 @@ function buildPair(data: any, type: any, contractAddress: any) {
 }
 
 /**
- * Build the lambda for the multisig transaction transfer to an implicit or originated account.
+ * Build the lambda for the multisig transaction delegate to an account.
+ *
+ * @param {string} address Account address to delegate the funds to
+ * @see {@link https://tezostaquito.io/docs/set_delegate}
+ */
+function delegateToAccount(address: string) {
+  return [
+    { prim: 'DROP' },
+    { prim: 'NIL', args: [{ prim: 'operation' }] },
+    {
+      prim: 'PUSH',
+      args: [{ prim: 'key_hash' }, { string: address }],
+    },
+    { prim: 'SOME' },
+    { prim: 'SET_DELEGATE' },
+    { prim: 'CONS' },
+  ];
+}
+
+/**
+ * Build the lambda for the multisig transaction transfer to an implicit account.
  *
  * @param {string} address Account address to send the funds to
  * @param {string} amount The amount in mutez to transfer
@@ -433,6 +538,7 @@ export function revealOperation(
  * @param {string} storageLimit Maximum amount in mutez to spend in storage fees
  * @param {string} balance New multisig account initial balance taken from the source account
  * @param {string[]} pubKeys List of public keys of the multisig owner
+ * @param delegate
  * @param {number} threshold Minimum number of signatures required to authorize a multisig operation
  * @returns An origination operation
  */
@@ -444,6 +550,7 @@ export function genericMultisigOriginationOperation(
   storageLimit: string,
   balance: string,
   pubKeys: string[],
+  delegate: string,
   threshold: number = DEFAULT_N,
 ): OriginationOp {
   const walletPublicKeys: any[] = [];
@@ -456,6 +563,7 @@ export function genericMultisigOriginationOperation(
     gas_limit: gasLimit,
     storage_limit: storageLimit,
     balance,
+    delegate,
     script: {
       code: genericMultisig,
       storage: {

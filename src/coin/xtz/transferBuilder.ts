@@ -61,7 +61,7 @@ export class TransferBuilder {
   }
 
   build(): TransferData {
-    if (!this._amount || !this._fromAddress || !this._toAddress || !this._fee) {
+    if (!this._fromAddress || !this._toAddress || !this._fee) {
       throw new BuildTransactionError(
         'Missing transfer mandatory fields. Amount, from address, destination (to) address and fee are mandatory',
       );

@@ -31,7 +31,7 @@ describe('Tezos Transaction builder', function() {
   });
 
   describe('should build', () => {
-    it('an init transaction', async () => {
+    it('an init transaction with delegation', async () => {
       const txBuilder: any = getBuilder('xtz');
       txBuilder.type(TransactionType.WalletInitialization);
       txBuilder.fee({ fee: '10' });
@@ -43,6 +43,7 @@ describe('Tezos Transaction builder', function() {
       txBuilder.source(sourceKeyPair.getAddress());
       txBuilder.initialBalance('1000000');
       txBuilder.counter('0');
+      txBuilder.initialDelegate('tz1KpbK5v1NB2vg3JHBxXJZhyQ7ur83Xp7iC');
       txBuilder.owner(
         new Xtz.KeyPair({ pub: 'sppk7ZWB8diU2TWehxdkWCV2DTFvn1hPz4qLjiD3nJQozKnoSEnSC8b' }).getKeys().pub,
       );
@@ -96,7 +97,7 @@ describe('Tezos Transaction builder', function() {
   });
 
   describe('should sign', () => {
-    it('an init transaction', async () => {
+    it('an init transaction with delegation', async () => {
       const txBuilder: any = getBuilder('xtz');
       txBuilder.type(TransactionType.WalletInitialization);
       txBuilder.fee({
@@ -107,6 +108,7 @@ describe('Tezos Transaction builder', function() {
       txBuilder.source(defaultKeyPair.getAddress());
       txBuilder.initialBalance('1000000');
       txBuilder.counter('0');
+      txBuilder.initialDelegate('tz1KpbK5v1NB2vg3JHBxXJZhyQ7ur83Xp7iC');
       txBuilder.owner('sppk7ZWB8diU2TWehxdkWCV2DTFvn1hPz4qLjiD3nJQozKnoSEnSC8b');
       txBuilder.owner('sppk7Zq9KPtwkzkgAsha4jU29C43McgP2skK56tjd7KJjhcmH6AZC1F');
       txBuilder.owner('sppk7d2ztzbrLdBaTB7yzaWRkPfcWGsrNQNJdkBE9bCTSSzekLNzpvf');
@@ -114,18 +116,18 @@ describe('Tezos Transaction builder', function() {
       txBuilder.sign({ key: defaultKeyPair.getKeys().prv });
       const tx = await txBuilder.build();
 
-      tx.id.should.equal('opNfjjEfWk7HsnY8fQrUoPFuXZfABweubA6D4bVScmqoVzcZVFA');
+      tx.id.should.equal('opNwtYLfJBo1uxWDskSDhqRDiUAJez1FCvekYbx1kgb7qTNMXEi');
       tx.type.should.equal(TransactionType.WalletInitialization);
       tx.source.should.equal('tz2PtJ9zgEgFVTRqy6GXsst54tH3ksEnYvvS');
       should.equal(tx.inputs.length, 1);
       should.equal(tx.outputs.length, 1);
       tx.inputs[0].address.should.equal('tz2PtJ9zgEgFVTRqy6GXsst54tH3ksEnYvvS');
       tx.inputs[0].value.should.equal('1004764');
-      tx.outputs[0].address.should.equal('KT1J9LfhDV6FQxR7aMaK7R6Rw8mBpfhP5MA3');
+      tx.outputs[0].address.should.equal('KT1RWZ2LaZogh6qkJp2nAkZPkhjyNp4JrPKS');
       tx.outputs[0].value.should.equal('1000000');
       tx.signature.length.should.equal(1);
       tx.signature[0].should.equal(
-        'sigVD57haAMCobHrCwH9ABfbFvdmyR9ZspZC3Zihb9tEPfhtzCKS1F8fLoVpodvor3PUoo7ry4j46xYETEzELmtnrNTaTPX4',
+        'sigfySne8efFbL5FA46Gs6DrZ3y5VMDh5Yg7z5LRbQAMvRZppyiC48Y2bxpLUus2JT9Yrz6gQn5aG8o1kZAiQnpRp4wNxaGZ',
       );
       Object.keys(tx.getIndexesByTransactionType()).length.should.equal(1);
     });
@@ -197,6 +199,48 @@ describe('Tezos Transaction builder', function() {
       indexesByTransactionType.reveal.length.should.equal(1);
       indexesByTransactionType.reveal[0].should.equal(0);
       Object.keys(tx.getIndexesByTransactionType()).length.should.equal(1);
+    });
+
+    it('a multisig delegation transaction', async () => {
+      const txBuilder: any = getBuilder('xtz');
+      txBuilder.type(TransactionType.Stake);
+      txBuilder.branch('BM4kxnGwLAb1mt6JjpoganCeskK1kDn1dMt56PNK2fGePiSMVTJ');
+      txBuilder.source(defaultKeyPair.getAddress());
+      txBuilder.counter('10');
+      txBuilder
+        .delegate()
+        .from('KT1NH2M23xovhw7uwWVuoGTYxykeCcVfSqhL')
+        .to('tz1VRjRpVKnv16AVprFH1tkDn4TDfVqA893A')
+        .fee('4764')
+        .gasLimit('33971')
+        .storageLimit('1292')
+        .dataToSign(
+          '0507070a0000001601fe3263b84b615ee65c320d72a3d48fcb756fed58000707000a0505020000002a0320053d036d0743035d0a000000150001ff63b72f9acd3643ec3b2dd31ecc807ec3d1e30346034e031b',
+        );
+      txBuilder.sign({ key: defaultKeyPair.getKeys().prv });
+      txBuilder.sign({
+        key: new KeyPair({ prv: 'spsk2cbiVsAvpGKmau9XcMscL3NRwjkyT575N5AyAofcoj41x6g6TL' }).getKeys().prv,
+      });
+      txBuilder.sign({ key: new KeyPair({ seed: Buffer.alloc(16) }).getKeys().prv });
+      const tx = await txBuilder.build();
+
+      tx.id.should.equal('ooazPcXyB28fUdmABpfMzkiGgwRDj5CzdACKbBH1cSohzvwSR6g');
+      //tx.type.should.equal(TransactionType.AddressDelegation);
+      should.equal(tx.inputs.length, 2);
+      should.equal(tx.outputs.length, 1);
+      tx.inputs[0].address.should.equal('tz2PtJ9zgEgFVTRqy6GXsst54tH3ksEnYvvS');
+      tx.inputs[0].value.should.equal('4764');
+      tx.inputs[1].address.should.equal('KT1NH2M23xovhw7uwWVuoGTYxykeCcVfSqhL');
+      tx.inputs[1].value.should.equal('0');
+      tx.outputs[0].address.should.equal('tz1VRjRpVKnv16AVprFH1tkDn4TDfVqA893A');
+      tx.outputs[0].value.should.equal('0');
+      tx.signature.length.should.equal(1);
+      tx.signature[0].should.equal(
+        'sigNHyybWdyrJuvumQ3oPkWbTMgXQmR6fiePuq2EvkcgUN41eTBFQ2yoLpLo2Xd2oJ5pb4zoywyzHK8FHJCjShkgCZBNz4bC',
+      );
+      tx.toBroadcastFormat().should.equal(
+        'b230aa61698dde84a7e5e672ca30a56ea0de4b269b91da4f30e2ce85aadad3ec6c01aaca87bdbcdc4e6117b667e29f9b504362c831bb9c250ab389028c0a000196369c90625575ba44594b23794832a9337f7a2d00ffff046d61696e0000011b070707070000050502000000390320053d036d0743035d0100000024747a3156526a5270564b6e76313641567072464831746b446e34544466567141383933410346034e031b02000000d0050901000000607369676a6b396335464368665a454a656e7334317374316e5a7636486455616d7469687237716b57317a466f6f766b585234693358516d78337651734e6e34784851437343574b716b4e33586a4d476b465872566663334b4751704a46764743050901000000607369676233346d363961534b664e6f78725733524232784647787a6e74476b56484c4166537858504877386a5145507558726832504c6a6563345663544e6b336f7836644b32364d6652416248515363537a4c4e655a5269427961425758744603060254c0e5361cea98541fa6daa777873b355aec858fc470a3925a6b76d5bbc3ec59ba97592a82b3ea74b38c79ee33a8e4ea142cf631ae73346eb4700909f177f4',
+      );
     });
 
     it('a multisig send transaction to an implicit account', async () => {
@@ -347,7 +391,6 @@ describe('Tezos Transaction builder', function() {
       );
       const indexesByTransactionType = tx.getIndexesByTransactionType();
       Object.keys(indexesByTransactionType).length.should.equal(1);
-      console.log(indexesByTransactionType);
       indexesByTransactionType.transaction.length.should.equal(2);
       indexesByTransactionType.transaction[0].should.equal(0);
       indexesByTransactionType.transaction[1].should.equal(1);

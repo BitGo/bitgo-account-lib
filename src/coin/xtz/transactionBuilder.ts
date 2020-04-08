@@ -6,6 +6,7 @@ import { BaseKey } from '../baseCoin/iface';
 import { BaseTransactionBuilder, TransactionType } from '../baseCoin';
 import {
   genericMultisigOriginationOperation,
+  multisigDelegationOperation,
   multisigTransactionOperation,
   revealOperation,
   singlesigTransactionOperation,
@@ -46,6 +47,7 @@ export class TransactionBuilder extends BaseTransactionBuilder {
   private _counter: BigNumber;
   private _fee: Fee;
   private _sourceAddress: string;
+  private _initialDelegate: string;
   private _sourceKeyPair?: KeyPair;
 
   // Address initialization transaction parameters
@@ -104,7 +106,10 @@ export class TransactionBuilder extends BaseTransactionBuilder {
       throw new SigningError('Cannot sign an empty send transaction');
     }
 
-    if (this._type === TransactionType.Send && (!this._sourceAddress || this._sourceAddress != signer.getAddress())) {
+    if (
+      (this._type === TransactionType.Send || this._type === TransactionType.Stake) &&
+      (!this._sourceAddress || this._sourceAddress != signer.getAddress())
+    ) {
       // If the signer is not the source and it is a send transaction, add it to the list of
       // multisig wallet signers
 
@@ -162,6 +167,12 @@ export class TransactionBuilder extends BaseTransactionBuilder {
             contents.push(this.buildAddressInitializationOperations());
           }
           contents = contents.concat(await this.buildSendTransactionContent());
+          break;
+        case TransactionType.Stake:
+          if (this._publicKeyToReveal) {
+            contents.push(this.buildAddressInitializationOperations());
+          }
+          contents = contents.concat(await this.buildAddressDelegationTransactionContent());
           break;
         default:
           throw new BuildTransactionError('Unsupported transaction type');
@@ -258,6 +269,21 @@ export class TransactionBuilder extends BaseTransactionBuilder {
   }
 
   /**
+   * Set an inital delegate to initialize this wallet to. This is different than
+   * the delegation to set while doing a separate delegation transaction
+   *
+   * @param delegate
+   * @param {string} amount Amount in mutez (1/1000000 Tezies)
+   */
+  initialDelegate(delegate: string): void {
+    if (this._type !== TransactionType.WalletInitialization) {
+      throw new BuildTransactionError('Initial delegation can only be set for wallet initialization transactions');
+    }
+    this.validateAddress({ address: delegate });
+    this._initialDelegate = delegate;
+  }
+
+  /**
    * Set the transaction counter to prevent submitting repeated transactions.
    *
    * @param {string} counter The counter to use
@@ -333,6 +359,7 @@ export class TransactionBuilder extends BaseTransactionBuilder {
       this._fee.storageLimit || DEFAULT_STORAGE_LIMIT.ORIGINATION.toString(),
       this._initialBalance || '0',
       this._walletOwnerPublicKeys,
+      this._initialDelegate,
     );
     this._counter = this._counter.plus(1);
     return originationOp;
@@ -362,6 +389,29 @@ export class TransactionBuilder extends BaseTransactionBuilder {
     }
     this._transfers.push(transferBuilder);
     return transferBuilder.amount(amount);
+  }
+
+  /**
+   * Initialize a new TransferBuilder to for a delegate transaction.
+   *
+   * @returns {TransferBuilder} A transfer builder
+   */
+  delegate(): TransferBuilder {
+    if (this._type !== TransactionType.Stake) {
+      throw new BuildTransactionError('Delegation can be made only for transactions with address delegation type');
+    }
+    let transferBuilder = new TransferBuilder();
+    // If source was set, use it as default for
+    if (this._sourceAddress) {
+      transferBuilder = transferBuilder.from(this._sourceAddress);
+    }
+    if (this._fee) {
+      transferBuilder = transferBuilder.fee(this._fee.fee);
+      transferBuilder = this._fee.gasLimit ? transferBuilder.gasLimit(this._fee.gasLimit) : transferBuilder;
+      transferBuilder = this._fee.storageLimit ? transferBuilder.storageLimit(this._fee.storageLimit) : transferBuilder;
+    }
+    this._transfers.push(transferBuilder);
+    return transferBuilder.coin(this._coinConfig.name);
   }
 
   /**
@@ -437,6 +487,40 @@ export class TransactionBuilder extends BaseTransactionBuilder {
   }
   //endregion
 
+  /**
+   * Build a delegation operation for a generic multisig contract.
+   *
+   * @returns {Promise<TransactionOp[]>} A Tezos transaction operation
+   */
+  private async buildAddressDelegationTransactionContent(): Promise<TransactionOp[]> {
+    const contents: TransactionOp[] = [];
+    for (let i = 0; i < this._transfers.length; i++) {
+      const transfer = this._transfers[i].build();
+      let transactionOp;
+      if (isValidOriginatedAddress(transfer.from)) {
+        // Offline transactions may not have the data to sign
+        const signatures = transfer.dataToSign ? await this.getSignatures(transfer.dataToSign) : [];
+        transactionOp = multisigDelegationOperation(
+          this._counter.toString(),
+          this._sourceAddress,
+          transfer.from,
+          transfer.counter || '0',
+          transfer.to,
+          signatures,
+          transfer.fee.fee,
+          transfer.fee.gasLimit,
+          transfer.fee.storageLimit,
+        );
+      } else {
+        throw new BuildTransactionError('Only originated accounts can stake');
+      }
+      contents.push(transactionOp);
+      this._counter = this._counter.plus(1);
+    }
+    return contents;
+  }
+  //endregion
+
   // region Validators
   /** @inheritdoc */
   validateValue(value: BigNumber): void {
@@ -475,6 +559,8 @@ export class TransactionBuilder extends BaseTransactionBuilder {
       case TransactionType.WalletInitialization:
         break;
       case TransactionType.Send:
+        break;
+      case TransactionType.Stake:
         break;
       default:
         throw new BuildTransactionError('Transaction type not supported');

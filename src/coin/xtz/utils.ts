@@ -3,7 +3,7 @@ import sodium from 'libsodium-wrappers';
 import { InMemorySigner } from '@taquito/signer';
 import { ec as EC } from 'elliptic';
 import { SigningError } from '../baseCoin/errors';
-import { genericMultisigDataToSign } from './multisigUtils';
+import { genericMultisigDataToSign, genericMultisigDelegationDataToSign } from './multisigUtils';
 import { HashType, SignResponse } from './iface';
 import { KeyPair } from './keyPair';
 
@@ -140,6 +140,29 @@ export function generateDataToSign(
     throw new Error('Invalid destination address ' + destinationAddress);
   }
   return genericMultisigDataToSign(contractAddress, destinationAddress, amount, contractCounter);
+}
+
+/**
+ * Useful wrapper to create the generic multisig contract data to sign when moving funds.
+ *
+ * @param {string} contractAddress The wallet contract address with the funds to withdraw
+ * @param {string} destinationAddress The address to transfer the funds to
+ * @param {number} amount Number mutez to transfer
+ * @param {string} contractCounter Wallet counter to use in the transaction
+ * @returns {any} A JSON representation of the Michelson script to sign and approve a transfer
+ */
+export function generateDelegationDataToSign(
+  contractAddress: string,
+  destinationAddress: string,
+  contractCounter: string,
+): any {
+  if (!isValidOriginatedAddress(contractAddress)) {
+    throw new Error('Invalid contract address ' + contractAddress + '. An originated account address was expected');
+  }
+  if (!isValidAddress(destinationAddress)) {
+    throw new Error('Invalid destination address ' + destinationAddress);
+  }
+  return genericMultisigDelegationDataToSign(contractAddress, destinationAddress, contractCounter);
 }
 
 /**

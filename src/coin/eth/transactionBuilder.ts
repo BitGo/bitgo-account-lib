@@ -282,11 +282,11 @@ export class TransactionBuilder extends BaseTransactionBuilder {
    */
   private buildWalletInitializationTransaction(): TxData {
     return {
-      gasLimit: addHexPrefix(new BigNumber(this._fee.gasLimit).toString(16)),
-      gasPrice: addHexPrefix(new BigNumber(this._fee.fee).toString(16)),
-      nonce: addHexPrefix(Number(this._counter).toString(16)),
+      gasLimit: this._fee.gasLimit,
+      gasPrice: this._fee.fee,
+      nonce: this._counter,
       data: getContractData(this._walletOwnerAddresses),
-      chainId: addHexPrefix(Number(this._chainId).toString(16)),
+      chainId: this._chainId,
       value: '0',
     };
   }
@@ -316,10 +316,10 @@ export class TransactionBuilder extends BaseTransactionBuilder {
     const sendData = this.getSendData();
     return {
       to: this._contractAddress,
-      gasLimit: addHexPrefix(new BigNumber(this._fee.gasLimit).toString(16)),
-      gasPrice: addHexPrefix(new BigNumber(this._fee.fee).toString(16)),
-      nonce: addHexPrefix(Number(this._counter).toString(16)),
-      chainId: addHexPrefix(Number(this._chainId).toString(16)),
+      gasLimit: this._fee.gasLimit,
+      gasPrice: this._fee.fee,
+      nonce: this._counter,
+      chainId: this._chainId,
       data: sendData,
       value: '0',
     };

@@ -251,6 +251,17 @@ export class TransactionBuilder extends BaseTransactionBuilder {
     this.validateAddress({ address: source });
     this._sourceAddress = source;
   }
+
+  private buildBase(data: string): TxData {
+    return {
+      gasLimit: this._fee.gasLimit,
+      gasPrice: this._fee.fee,
+      nonce: this._counter,
+      data: data,
+      chainId: this._chainId,
+      value: '0',
+    };
+  }
   // endregion
 
   // region WalletInitialization builder methods
@@ -281,14 +292,7 @@ export class TransactionBuilder extends BaseTransactionBuilder {
    * @returns {TxData} The Ethereum transaction data
    */
   private buildWalletInitializationTransaction(): TxData {
-    return {
-      gasLimit: this._fee.gasLimit,
-      gasPrice: this._fee.fee,
-      nonce: this._counter,
-      data: getContractData(this._walletOwnerAddresses),
-      chainId: this._chainId,
-      value: '0',
-    };
+    return this.buildBase(getContractData(this._walletOwnerAddresses));
   }
   //endregion
 
@@ -314,15 +318,9 @@ export class TransactionBuilder extends BaseTransactionBuilder {
 
   private buildSendTransaction(): TxData {
     const sendData = this.getSendData();
-    return {
-      to: this._contractAddress,
-      gasLimit: this._fee.gasLimit,
-      gasPrice: this._fee.fee,
-      nonce: this._counter,
-      chainId: this._chainId,
-      data: sendData,
-      value: '0',
-    };
+    const tx: TxData = this.buildBase(sendData);
+    tx.to = this._contractAddress;
+    return tx;
   }
   //endregion
 

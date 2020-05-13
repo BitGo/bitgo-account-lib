@@ -28,7 +28,7 @@ export class Transaction extends Eth.Transaction {
   /** @inheritdoc */
   toBroadcastFormat(): any {
     if (!this._encodedTransaction) {
-      throw new InvalidTransactionError('Missing encoded transaction');
+      return super.toBroadcastFormat();
     }
     return this._encodedTransaction;
   }

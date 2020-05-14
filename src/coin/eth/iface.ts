@@ -8,6 +8,7 @@ export interface Fee extends BaseFee {
  * A transaction's data.
  */
 export interface TxData {
+  //TODO: Define each field type
   gasLimit: string;
   gasPrice: string;
   to?: string;

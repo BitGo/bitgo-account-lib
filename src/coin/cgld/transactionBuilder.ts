@@ -57,10 +57,6 @@ export class TransactionBuilder extends Eth.TransactionBuilder {
           .amount(transactionJson.value);
         break;
       case TransactionType.StakingUnlock:
-        this._stakingBuilder = new StakingBuilder(this._coinConfig)
-          .type(StakingOperationTypes.UNLOCK)
-          .amount(transactionJson.value);
-        break;
       case TransactionType.StakingVote:
       case TransactionType.StakingActivate:
         this._stakingBuilder = new StakingBuilder(this._coinConfig, transactionJson.data);

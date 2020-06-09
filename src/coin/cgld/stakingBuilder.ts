@@ -4,7 +4,7 @@ import { isValidAmount, isValidEthAddress, getRawDecoded, getBufferedByteCode } 
 import { BuildTransactionError, InvalidParameterValueError, InvalidTransactionError } from '../baseCoin/errors';
 import { StakingOperationTypes } from '../baseCoin';
 import { StakingCall } from './stakingCall';
-import { getOperationConfig, VoteMethodId, ActivateMethodId } from './stakingUtils';
+import { getOperationConfig, VoteMethodId, ActivateMethodId, UnlockMethodId } from './stakingUtils';
 
 export class StakingBuilder {
   private readonly DEFAULT_ADDRESS = '0x0000000000000000000000000000000000000000';
@@ -121,17 +121,14 @@ export class StakingBuilder {
   }
 
   private decodeStakingData(data: string): void {
-    if (!(data.startsWith(VoteMethodId) || data.startsWith(ActivateMethodId))) {
-      throw new BuildTransactionError(`Invalid staking bytecode: ${data}`);
-    }
+    this.classifyStakingType(data);
 
-    this._type = data.startsWith(VoteMethodId) ? StakingOperationTypes.VOTE : StakingOperationTypes.ACTIVATE;
     const operation = getOperationConfig(this._type, this._coinConfig.network.type);
     const decoded = getRawDecoded(operation.types, getBufferedByteCode(operation.methodId, data));
     switch (this._type) {
       case StakingOperationTypes.VOTE:
         if (decoded.length != 4) {
-          throw new BuildTransactionError(`Invalid decoded data: ${data}`);
+          throw new BuildTransactionError(`Invalid vote decoded data: ${data}`);
         }
         const [groupToVote, amount, lesser, greater] = decoded;
         this._amount = ethUtil.bufferToHex(amount);
@@ -141,11 +138,30 @@ export class StakingBuilder {
         break;
       case StakingOperationTypes.ACTIVATE:
         if (decoded.length != 1) {
-          throw new BuildTransactionError(`Invalid decoded data: ${data}`);
+          throw new BuildTransactionError(`Invalid activate decoded data: ${data}`);
         }
         const [groupToActivate] = decoded;
         this._validatorGroup = ethUtil.bufferToHex(groupToActivate);
         break;
+      case StakingOperationTypes.UNLOCK:
+        if (decoded.length != 1) {
+          throw new BuildTransactionError(`Invalid unlock decoded data: ${data}`);
+        }
+        const [decodedAmount] = decoded;
+        this._amount = ethUtil.bufferToHex(decodedAmount);
+        break;
+    }
+  }
+
+  private classifyStakingType(data: string): void {
+    if (data.startsWith(VoteMethodId)) {
+      this._type = StakingOperationTypes.VOTE;
+    } else if (data.startsWith(ActivateMethodId)) {
+      this._type = StakingOperationTypes.ACTIVATE;
+    } else if (data.startsWith(UnlockMethodId)) {
+      this._type = StakingOperationTypes.UNLOCK;
+    } else {
+      throw new BuildTransactionError(`Invalid staking bytecode: ${data}`);
     }
   }
 }

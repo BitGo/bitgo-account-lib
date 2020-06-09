@@ -14,13 +14,22 @@ describe('Celo staking operations builder', function() {
   });
 
   const lockOperation = getOperationConfig(StakingOperationTypes.LOCK, coin.network.type);
+  const unlockOperation = getOperationConfig(StakingOperationTypes.UNLOCK, coin.network.type);
   const voteOperation = getOperationConfig(StakingOperationTypes.VOTE, coin.network.type);
   const activateOperation = getOperationConfig(StakingOperationTypes.ACTIVATE, coin.network.type);
 
-  it('should build an staking lock operation', () => {
+  it('should build a staking lock operation', () => {
     const staking = builder.build();
     should.equal(staking.address, lockOperation.contractAddress);
     should.equal(staking.serialize(), lockOperation.methodId);
+  });
+
+  it('should build a staking unlock operation', () => {
+    builder.type(StakingOperationTypes.UNLOCK);
+    builder.amount('100');
+    const staking = builder.build();
+    should.equal(staking.address, unlockOperation.contractAddress);
+    staking.serialize().should.startWith(unlockOperation.methodId);
   });
 
   it('should build a staking vote operation', () => {

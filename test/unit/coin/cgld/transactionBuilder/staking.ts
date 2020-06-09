@@ -31,19 +31,20 @@ describe('Celo staking transaction builder', () => {
       .lock()
       .type(StakingOperationTypes.LOCK)
       .amount('100');
-    // console.log((await txBuilder.build()).toBroadcastFormat());
     const txJson = (await txBuilder.build()).toJson();
     should.equal(txJson.to, LockOperation.contractAddress);
     should.equal(txJson.data, LockOperation.methodId);
   });
 
-  it.skip('should build an unlock transaction', async function() {
+  it('should build an unlock transaction', async function() {
     txBuilder.type(TransactionType.StakingUnlock);
-    txBuilder.unlock('1').type(StakingOperationTypes.UNLOCK);
-    console.log((await txBuilder.build()).toBroadcastFormat());
-    // const txJson = (await txBuilder.build()).toJson();
-    // should.equal(txJson.to, UnlockOperation.contractAddress);
-    // txJson.data.should.startWith(UnlockOperation.methodId);
+    txBuilder
+      .unlock()
+      .amount('100')
+      .type(StakingOperationTypes.UNLOCK);
+    const txJson = (await txBuilder.build()).toJson();
+    should.equal(txJson.to, UnlockOperation.contractAddress);
+    txJson.data.should.startWith(UnlockOperation.methodId);
   });
 
   it('should build a vote transaction', async function() {
@@ -84,7 +85,7 @@ describe('Celo staking transaction builder', () => {
     should.equal(tx.toBroadcastFormat(), testData.LOCK_BROADCAST_TX);
   });
 
-  it.skip('should sign and build a unlock transaction from serialized', async function() {
+  it('should sign and build a unlock transaction from serialized', async function() {
     const builder = getBuilder('tcgld') as Cgld.TransactionBuilder;
     builder.type(TransactionType.StakingLock);
     builder.from(
@@ -95,9 +96,9 @@ describe('Celo staking transaction builder', () => {
     const tx = await builder.build();
     const txJson = tx.toJson();
     should.equal(txJson.to, UnlockOperation.contractAddress);
-    should.equal(txJson.data, UnlockOperation.methodId); // will be different
-    should.equal(txJson.from, testData.ACCOUNT1); // change
-    should.equal(tx.toBroadcastFormat(), testData.LOCK_BROADCAST_TX); // change
+    txJson.data.should.startWith(UnlockOperation.methodId); // TODO : should.equal(txJson.data, UnlockOperation.methodId)
+    should.equal(txJson.from, testData.ACCOUNT1);
+    should.equal(tx.toBroadcastFormat(), testData.UNLOCK_BROADCAST_TX);
   });
 
   it('should sign and build a vote transaction from serialized', async function() {

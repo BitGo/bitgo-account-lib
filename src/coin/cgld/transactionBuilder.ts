@@ -80,19 +80,10 @@ export class TransactionBuilder extends Eth.TransactionBuilder {
     return this._stakingBuilder;
   }
 
-  // private getStakingBuilder(StakingOperationTypes: StakingOperationTypes): StakingBuilder {
-  //   if (!this._stakingBuilder) {
-  //     this._stakingBuilder = new StakingBuilder(this._coinConfig).type(StakingOperationTypes);
-  //   }
-  //   return this._stakingBuilder;
-  // }
-
   unlock(): StakingBuilder {
-    // TODO : move this two validation to function
     if (this._type !== TransactionType.StakingUnlock) {
       throw new BuildTransactionError('Unlock can only be set for Staking Unlock transactions type');
     }
-    // return this.getStakingBuilder(StakingOperationTypes.UNLOCK); // TODO : to the same to lock() and vote() and activate() ?
     if (!this._stakingBuilder) {
       this._stakingBuilder = new StakingBuilder(this._coinConfig).type(StakingOperationTypes.UNLOCK);
     }
@@ -107,7 +98,6 @@ export class TransactionBuilder extends Eth.TransactionBuilder {
   }
 
   private buildLockStakeTransaction(): TxData {
-    // TODO : buildLockingStake?
     const stake = this.getStaking();
     const data = this.buildBase(stake.serialize());
     data.to = stake.address;
@@ -116,7 +106,6 @@ export class TransactionBuilder extends Eth.TransactionBuilder {
   }
 
   private buildUnLockStakeTransaction(): TxData {
-    // TODO : buildLockingStake?
     const stake = this.getStaking();
     const data = this.buildBase(stake.serialize());
     data.to = stake.address;

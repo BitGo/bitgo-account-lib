@@ -1,5 +1,6 @@
 import should from 'should';
 import { coins } from '@bitgo/statics';
+import { build } from 'protobufjs';
 import { Cgld, getBuilder } from '../../../../../src';
 import { StakingOperationTypes, TransactionType } from '../../../../../src/coin/baseCoin';
 import * as testData from '../../../../resources/cgld/cgld';
@@ -21,6 +22,7 @@ describe('Celo staking transaction builder', () => {
 
   const coin = coins.get('tcgld');
   const LockOperation = getOperationConfig(StakingOperationTypes.LOCK, coin.network.type);
+  const UnlockOperation = getOperationConfig(StakingOperationTypes.UNLOCK, coin.network.type);
   const VoteOperation = getOperationConfig(StakingOperationTypes.VOTE, coin.network.type);
 
   it('should build a lock transaction', async function() {
@@ -28,9 +30,19 @@ describe('Celo staking transaction builder', () => {
       .lock()
       .type(StakingOperationTypes.LOCK)
       .amount('100');
+    // console.log((await txBuilder.build()).toBroadcastFormat());
     const txJson = (await txBuilder.build()).toJson();
     should.equal(txJson.to, LockOperation.contractAddress);
     should.equal(txJson.data, LockOperation.methodId);
+  });
+
+  it.skip('should build an unlock transaction', async function() {
+    txBuilder.type(TransactionType.StakingUnlock);
+    txBuilder.unlock('1').type(StakingOperationTypes.UNLOCK);
+    console.log((await txBuilder.build()).toBroadcastFormat());
+    // const txJson = (await txBuilder.build()).toJson();
+    // should.equal(txJson.to, UnlockOperation.contractAddress);
+    // txJson.data.should.startWith(UnlockOperation.methodId);
   });
 
   it('should build a vote transaction', async function() {
@@ -60,6 +72,22 @@ describe('Celo staking transaction builder', () => {
     should.equal(tx.toBroadcastFormat(), testData.LOCK_BROADCAST_TX);
   });
 
+  it.skip('should sign and build a unlock transaction from serialized', async function() {
+    const builder = getBuilder('tcgld') as Cgld.TransactionBuilder;
+    builder.type(TransactionType.StakingLock);
+    builder.from(
+      '0xf84d01843b9aca0083b8a1a08080809494c3e6675015d8479b648657e7ddfcd938489d0d80a46198e339000000000000000000000000000000000000000000000000000000000000006482aef28080',
+    );
+    builder.source(testData.KEYPAIR_PRV.getAddress());
+    builder.sign({ key: testData.PRIVATE_KEY });
+    const tx = await builder.build();
+    const txJson = tx.toJson();
+    should.equal(txJson.to, UnlockOperation.contractAddress);
+    should.equal(txJson.data, UnlockOperation.methodId); // will be different
+    should.equal(txJson.from, testData.ACCOUNT1); // change
+    should.equal(tx.toBroadcastFormat(), testData.LOCK_BROADCAST_TX); // change
+  });
+
   it('should sign and build a vote transaction from serialized', async function() {
     const builder = getBuilder('tcgld') as Cgld.TransactionBuilder;
     builder.from(testData.VOTE_BROADCAST_TX);
@@ -81,6 +109,18 @@ describe('Celo staking transaction builder', () => {
       },
       e => {
         return e.message === 'Lock can only be set for Staking Lock transactions type';
+      },
+    );
+  });
+
+  it('should fail to call unlock if it is not an staking unlock type transaction', () => {
+    txBuilder.type(TransactionType.AddressInitialization);
+    should.throws(
+      () => {
+        txBuilder.unlock();
+      },
+      e => {
+        return e.message === 'Unlock can only be set for Staking Unlock transactions type';
       },
     );
   });

@@ -26,6 +26,8 @@ export class TransactionBuilder extends Eth.TransactionBuilder {
     switch (this._type) {
       case TransactionType.StakingLock:
         return this.buildLockStakeTransaction();
+      case TransactionType.StakingUnlock:
+        return this.buildUnLockStakeTransaction();
       case TransactionType.StakingVote:
       case TransactionType.StakingActivate:
         return this.buildElectionStakingTransaction();
@@ -54,6 +56,11 @@ export class TransactionBuilder extends Eth.TransactionBuilder {
           .type(StakingOperationTypes.LOCK)
           .amount(transactionJson.value);
         break;
+      case TransactionType.StakingUnlock:
+        this._stakingBuilder = new StakingBuilder(this._coinConfig)
+          .type(StakingOperationTypes.UNLOCK)
+          .amount(transactionJson.value);
+        break;
       case TransactionType.StakingVote:
       case TransactionType.StakingActivate:
         this._stakingBuilder = new StakingBuilder(this._coinConfig, transactionJson.data);
@@ -75,6 +82,25 @@ export class TransactionBuilder extends Eth.TransactionBuilder {
     return this._stakingBuilder;
   }
 
+  // private getStakingBuilder(StakingOperationTypes: StakingOperationTypes): StakingBuilder {
+  //   if (!this._stakingBuilder) {
+  //     this._stakingBuilder = new StakingBuilder(this._coinConfig).type(StakingOperationTypes);
+  //   }
+  //   return this._stakingBuilder;
+  // }
+
+  unlock(): StakingBuilder {
+    // TODO : move this two validation to function
+    if (this._type !== TransactionType.StakingUnlock) {
+      throw new BuildTransactionError('Unlock can only be set for Staking Unlock transactions type');
+    }
+    // return this.getStakingBuilder(StakingOperationTypes.UNLOCK); // TODO : to the same to lock() and vote() and activate() ?
+    if (!this._stakingBuilder) {
+      this._stakingBuilder = new StakingBuilder(this._coinConfig).type(StakingOperationTypes.UNLOCK);
+    }
+    return this._stakingBuilder;
+  }
+
   private getStaking(): StakingCall {
     if (!this._stakingBuilder) {
       throw new BuildTransactionError('No staking information set');
@@ -83,6 +109,16 @@ export class TransactionBuilder extends Eth.TransactionBuilder {
   }
 
   private buildLockStakeTransaction(): TxData {
+    // TODO : buildLockingStake?
+    const stake = this.getStaking();
+    const data = this.buildBase(stake.serialize());
+    data.to = stake.address;
+    data.value = stake.amount;
+    return data;
+  }
+
+  private buildUnLockStakeTransaction(): TxData {
+    // TODO : buildLockingStake?
     const stake = this.getStaking();
     const data = this.buildBase(stake.serialize());
     data.to = stake.address;

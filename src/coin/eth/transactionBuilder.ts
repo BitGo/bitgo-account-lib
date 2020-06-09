@@ -249,6 +249,7 @@ export class TransactionBuilder extends BaseTransactionBuilder {
         }
         break;
       case TransactionType.StakingLock:
+      case TransactionType.StakingUnlock:
       case TransactionType.StakingVote:
       case TransactionType.StakingActivate:
         break;

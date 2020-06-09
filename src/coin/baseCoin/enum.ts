@@ -1,3 +1,5 @@
+import { Method } from 'protobufjs';
+
 /**
  * Internal metadata. Defines the type of transaction.
  */
@@ -15,6 +17,8 @@ export enum TransactionType {
   StakingVote,
   //Activate
   StakingActivate,
+  // Unlock
+  StakingUnlock,
 }
 
 /**
@@ -29,4 +33,5 @@ export enum StakingOperationTypes {
   LOCK,
   VOTE,
   ACTIVATE,
+  UNLOCK,
 }

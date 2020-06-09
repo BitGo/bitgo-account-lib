@@ -64,6 +64,8 @@ export class StakingBuilder {
     switch (this._type) {
       case StakingOperationTypes.LOCK:
         return this.buildLockStaking();
+      case StakingOperationTypes.UNLOCK:
+        return this.buildUnlockStaking();
       case StakingOperationTypes.VOTE:
         this.validateVoteFields();
         return this.buildVoteStaking();
@@ -84,6 +86,13 @@ export class StakingBuilder {
   private buildLockStaking(): StakingCall {
     const operation = getOperationConfig(this._type, this._coinConfig.network.type);
     return new StakingCall(this._amount, operation.contractAddress, operation.methodId, operation.types, []);
+  }
+
+  private buildUnlockStaking(): StakingCall {
+    // TODO : Code duplication
+    const operation = getOperationConfig(this._type, this._coinConfig.network.type);
+    const params = [this._amount];
+    return new StakingCall('0', operation.contractAddress, operation.methodId, operation.types, params);
   }
 
   private validateVoteFields(): void {

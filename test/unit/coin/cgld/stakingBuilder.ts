@@ -64,7 +64,7 @@ describe('Celo staking operations builder', function() {
     builder.type(StakingOperationTypes.ACTIVATE);
     builder.for('0x34084d6a4df32d9ad7395f4baad0db55c9c38145');
     const staking = builder.build();
-    should.equal(staking.address, voteOperation.contractAddress);
+    should.equal(staking.address, activateOperation.contractAddress);
     should.equal(staking.serialize(), '0x1c5a9d9c00000000000000000000000034084d6a4df32d9ad7395f4baad0db55c9c38145');
   });
 

@@ -3,7 +3,7 @@ import { coins } from '@bitgo/statics';
 import { Cgld, getBuilder } from '../../../../../src';
 import { StakingOperationTypes, TransactionType } from '../../../../../src/coin/baseCoin';
 import * as testData from '../../../../resources/cgld/cgld';
-import { getOperationConfig, ActivateMethodId } from '../../../../../src/coin/cgld/stakingUtils';
+import { getOperationConfig } from '../../../../../src/coin/cgld/stakingUtils';
 
 describe('Celo staking transaction builder', () => {
   let txBuilder;
@@ -106,6 +106,30 @@ describe('Celo staking transaction builder', () => {
       },
       e => {
         return e.message === 'Lock can only be set for Staking Lock transactions type';
+      },
+    );
+  });
+
+  it('should fail to call vote if it is not an staking vote type transaction', () => {
+    txBuilder.type(TransactionType.AddressInitialization);
+    should.throws(
+      () => {
+        txBuilder.vote();
+      },
+      e => {
+        return e.message === 'Votes can only be set for a staking transaction';
+      },
+    );
+  });
+
+  it('should fail to call activate if it is not an staking activate type transaction', () => {
+    txBuilder.type(TransactionType.AddressInitialization);
+    should.throws(
+      () => {
+        txBuilder.activate();
+      },
+      e => {
+        return e.message === 'Activation can only be set for a staking transaction';
       },
     );
   });

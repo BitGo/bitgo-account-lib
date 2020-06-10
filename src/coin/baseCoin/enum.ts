@@ -19,6 +19,8 @@ export enum TransactionType {
   StakingActivate,
   // Unlock
   StakingUnlock,
+  //Withdraw
+  StakingWithdraw,
 }
 
 /**
@@ -34,4 +36,5 @@ export enum StakingOperationTypes {
   VOTE,
   ACTIVATE,
   UNLOCK,
+  WITHDRAW,
 }

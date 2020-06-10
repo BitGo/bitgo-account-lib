@@ -4,7 +4,7 @@ import { isValidAmount, isValidEthAddress, getRawDecoded, getBufferedByteCode } 
 import { BuildTransactionError, InvalidParameterValueError, InvalidTransactionError } from '../baseCoin/errors';
 import { StakingOperationTypes } from '../baseCoin';
 import { StakingCall } from './stakingCall';
-import { getOperationConfig, VoteMethodId, ActivateMethodId, UnlockMethodId } from './stakingUtils';
+import { getOperationConfig, VoteMethodId, ActivateMethodId, UnlockMethodId, WithdrawMethodId } from './stakingUtils';
 
 export class StakingBuilder {
   private readonly DEFAULT_ADDRESS = '0x0000000000000000000000000000000000000000';
@@ -12,6 +12,7 @@ export class StakingBuilder {
   private _validatorGroup: string;
   private _lesser = this.DEFAULT_ADDRESS;
   private _greater = this.DEFAULT_ADDRESS;
+  private _index: number;
   private _type: StakingOperationTypes;
   private _coinConfig: Readonly<CoinConfig>;
 
@@ -59,6 +60,14 @@ export class StakingBuilder {
     return this;
   }
 
+  index(index: number): this {
+    if (index > 0) {
+      throw new InvalidParameterValueError('Invalid index for withdrawal');
+    }
+    this._index = index;
+    return this;
+  }
+
   build(): StakingCall {
     this.validateMandatoryFields();
     switch (this._type) {
@@ -72,6 +81,8 @@ export class StakingBuilder {
       case StakingOperationTypes.ACTIVATE:
         this.validateGroup();
         return this.buildActivateStaking();
+      case StakingOperationTypes.WITHDRAW:
+        return this.buildWithdrawStaking();
       default:
         throw new InvalidTransactionError('Invalid staking operation: ' + this._type);
     }
@@ -120,6 +131,12 @@ export class StakingBuilder {
     return new StakingCall('0', operation.contractAddress, operation.methodId, operation.types, params);
   }
 
+  private buildWithdrawStaking(): StakingCall {
+    const operation = getOperationConfig(this._type, this._coinConfig.network.type);
+    const params = [this._index.toFixed()];
+    return new StakingCall('0', operation.contractAddress, operation.methodId, operation.types, params);
+  }
+
   private decodeStakingData(data: string): void {
     this.classifyStakingType(data);
 
@@ -150,6 +167,12 @@ export class StakingBuilder {
         const [decodedAmount] = decoded;
         this._amount = ethUtil.bufferToHex(decodedAmount);
         break;
+      case StakingOperationTypes.WITHDRAW:
+        if (decoded.length != 1) {
+          throw new BuildTransactionError(`Invalid withdraw decoded data: ${data}`);
+        }
+        const [index] = decoded;
+        this._index = ethUtil.bufferToHex(index);
     }
   }
 
@@ -160,6 +183,8 @@ export class StakingBuilder {
       this._type = StakingOperationTypes.ACTIVATE;
     } else if (data.startsWith(UnlockMethodId)) {
       this._type = StakingOperationTypes.UNLOCK;
+    } else if (data.startsWith(WithdrawMethodId)) {
+      this._type = StakingOperationTypes.WITHDRAW;
     } else {
       throw new BuildTransactionError(`Invalid staking bytecode: ${data}`);
     }

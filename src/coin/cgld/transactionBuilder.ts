@@ -27,10 +27,10 @@ export class TransactionBuilder extends Eth.TransactionBuilder {
       case TransactionType.StakingLock:
         return this.buildLockStakeTransaction();
       case TransactionType.StakingUnlock:
-        return this.buildUnLockStakeTransaction();
       case TransactionType.StakingVote:
       case TransactionType.StakingActivate:
-        return this.buildElectionStakingTransaction();
+      case TransactionType.StakingWithdraw:
+        return this.buildStakingTransaction();
     }
     return super.getTransactionData();
   }
@@ -59,6 +59,7 @@ export class TransactionBuilder extends Eth.TransactionBuilder {
       case TransactionType.StakingUnlock:
       case TransactionType.StakingVote:
       case TransactionType.StakingActivate:
+      case TransactionType.StakingWithdraw:
         this._stakingBuilder = new StakingBuilder(this._coinConfig, transactionJson.data);
         break;
       default:
@@ -103,14 +104,6 @@ export class TransactionBuilder extends Eth.TransactionBuilder {
     return data;
   }
 
-  private buildUnLockStakeTransaction(): TxData {
-    const stake = this.getStaking();
-    const data = this.buildBase(stake.serialize());
-    data.to = stake.address;
-    data.value = stake.amount;
-    return data;
-  }
-
   /**
    * Gets the staking vote builder if exist, or creates a new one for this transaction and returns it
    *
@@ -128,7 +121,7 @@ export class TransactionBuilder extends Eth.TransactionBuilder {
     return this._stakingBuilder;
   }
 
-  private buildElectionStakingTransaction(): TxData {
+  private buildStakingTransaction(): TxData {
     const stake = this.getStaking();
     const data = this.buildBase(stake.serialize());
     data.to = stake.address;
@@ -148,6 +141,23 @@ export class TransactionBuilder extends Eth.TransactionBuilder {
 
     if (!this._stakingBuilder) {
       this._stakingBuilder = new StakingBuilder(this._coinConfig).type(StakingOperationTypes.ACTIVATE);
+    }
+
+    return this._stakingBuilder;
+  }
+
+  /**
+   * Gets the staking withdraw builder if exist, or creates a new one for this transaction and returns it
+   *
+   * @returns {StakingBuilder} the staking builder
+   */
+  withdraw(): StakingBuilder {
+    if (this._type !== TransactionType.StakingWithdraw) {
+      throw new BuildTransactionError('Withdraw can only be set for a staking transaction');
+    }
+
+    if (!this._stakingBuilder) {
+      this._stakingBuilder = new StakingBuilder(this._coinConfig).type(StakingOperationTypes.WITHDRAW);
     }
 
     return this._stakingBuilder;

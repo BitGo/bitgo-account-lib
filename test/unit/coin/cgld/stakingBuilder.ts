@@ -44,6 +44,13 @@ describe('Celo staking operations builder', function() {
     should.equal(staking.serialize(), testData.WITHDRAW_DATA);
   });
 
+  it('should fail if the index is invalid', () => {
+    builder.type(StakingOperationTypes.WITHDRAW);
+    should.throws(() => {
+      builder.index(-1);
+    }, 'Invalid index for withdrawal');
+  });
+
   it('should build a staking vote operation', () => {
     builder.type(StakingOperationTypes.VOTE);
     builder.for('0x34084d6a4df32d9ad7395f4baad0db55c9c38145');

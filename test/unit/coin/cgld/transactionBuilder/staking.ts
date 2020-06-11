@@ -23,6 +23,7 @@ describe('Celo staking transaction builder', () => {
   const coin = coins.get('tcgld');
   const LockOperation = getOperationConfig(StakingOperationTypes.LOCK, coin.network.type);
   const UnlockOperation = getOperationConfig(StakingOperationTypes.UNLOCK, coin.network.type);
+  const WithdrawOperation = getOperationConfig(StakingOperationTypes.WITHDRAW, coin.network.type);
   const VoteOperation = getOperationConfig(StakingOperationTypes.VOTE, coin.network.type);
   const ActivateOperation = getOperationConfig(StakingOperationTypes.ACTIVATE, coin.network.type);
 
@@ -33,6 +34,7 @@ describe('Celo staking transaction builder', () => {
       .amount('100');
     const txJson = (await txBuilder.build()).toJson();
     should.equal(txJson.to, LockOperation.contractAddress);
+    txJson.data.should.startWith(LockOperation.methodId);
     should.equal(txJson.data, LockOperation.methodId);
   });
 
@@ -45,6 +47,20 @@ describe('Celo staking transaction builder', () => {
     const txJson = (await txBuilder.build()).toJson();
     should.equal(txJson.to, UnlockOperation.contractAddress);
     txJson.data.should.startWith(UnlockOperation.methodId);
+    should.equal(txJson.data, testData.UNLOCK_DATA);
+  });
+
+  it('should build a withdraw transaction', async function() {
+    txBuilder.type(TransactionType.StakingWithdraw);
+    txBuilder
+      .withdraw()
+      .index(0)
+      .type(StakingOperationTypes.WITHDRAW);
+    console.log((await txBuilder.build()).toBroadcastFormat());
+    const txJson = (await txBuilder.build()).toJson();
+    should.equal(txJson.to, WithdrawOperation.contractAddress);
+    txJson.data.should.startWith(WithdrawOperation.methodId);
+    should.equal(txJson.data, testData.WITHDRAW_DATA);
   });
 
   it('should build a vote transaction', async function() {
@@ -58,6 +74,7 @@ describe('Celo staking transaction builder', () => {
     txBuilder.sign({ key: testData.PRIVATE_KEY });
     const txJson = (await txBuilder.build()).toJson();
     should.equal(txJson.to, VoteOperation.contractAddress);
+    txJson.data.should.startWith(testData.VOTE_DATA);
     should.equal(txJson.data, testData.VOTE_DATA);
   });
 
@@ -68,6 +85,7 @@ describe('Celo staking transaction builder', () => {
     const tx = await txBuilder.build();
     const txJson = tx.toJson();
     should.equal(txJson.to, ActivateOperation.contractAddress);
+    txJson.data.should.startWith(testData.ACTIVATE_DATA);
     should.equal(txJson.data, testData.ACTIVATE_DATA);
     should.equal(tx.toBroadcastFormat(), testData.ACTIVATE_BROADCAST_TX);
   });
@@ -80,12 +98,13 @@ describe('Celo staking transaction builder', () => {
     const tx = await builder.build();
     const txJson = tx.toJson();
     should.equal(txJson.to, LockOperation.contractAddress);
+    txJson.data.should.startWith(LockOperation.methodId);
     should.equal(txJson.data, LockOperation.methodId);
     should.equal(txJson.from, testData.ACCOUNT1);
     should.equal(tx.toBroadcastFormat(), testData.LOCK_BROADCAST_TX);
   });
 
-  it('should sign and build a unlock transaction from serialized', async function() {
+  it('should sign and build an unlock transaction from serialized', async function() {
     const builder = getBuilder('tcgld') as Cgld.TransactionBuilder;
     builder.type(TransactionType.StakingLock);
     builder.from(
@@ -97,8 +116,26 @@ describe('Celo staking transaction builder', () => {
     const txJson = tx.toJson();
     should.equal(txJson.to, UnlockOperation.contractAddress);
     txJson.data.should.startWith(UnlockOperation.methodId); // TODO : should.equal(txJson.data, UnlockOperation.methodId)
+    should.equal(txJson.data, testData.UNLOCK_DATA);
     should.equal(txJson.from, testData.ACCOUNT1);
     should.equal(tx.toBroadcastFormat(), testData.UNLOCK_BROADCAST_TX);
+  });
+
+  it.skip('should sign and build a withdraw transaction from serialized', async function() {
+    //TODO: Fix this test
+    const builder = getBuilder('tcgld') as Cgld.TransactionBuilder;
+    builder.type(TransactionType.StakingWithdraw);
+    builder.from(
+      '0xf84d01843b9aca0083b8a1a08080809494c3e6675015d8479b648657e7ddfcd938489d0d80a42e1a7d4d000000000000000000000000000000000000000000000000000000000000000082aef28080',
+    ); // TODO : get that from console.log((await txBuilder.build()).toBroadcastFormat());
+    builder.source(testData.KEYPAIR_PRV.getAddress());
+    builder.sign({ key: testData.PRIVATE_KEY });
+    const tx = await builder.build();
+    const txJson = tx.toJson();
+    should.equal(txJson.to, WithdrawOperation.contractAddress);
+    txJson.data.should.startWith(WithdrawOperation.methodId);
+    should.equal(txJson.from, testData.ACCOUNT1);
+    should.equal(tx.toBroadcastFormat(), testData.WITHDRAW_BROADCAST_TX); // TODO : testData still not changed
   });
 
   it('should sign and build a vote transaction from serialized', async function() {
@@ -171,6 +208,18 @@ describe('Celo staking transaction builder', () => {
       },
       e => {
         return e.message === 'Unlock can only be set for Staking Unlock transactions type';
+      },
+    );
+  });
+
+  it('should fail to call withdraw if it is not an staking withdraw type transaction', () => {
+    txBuilder.type(TransactionType.AddressInitialization);
+    should.throws(
+      () => {
+        txBuilder.withdraw();
+      },
+      e => {
+        return e.message === 'Withdraw can only be set for a staking transaction';
       },
     );
   });

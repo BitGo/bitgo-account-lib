@@ -3,6 +3,7 @@ import { coins } from '@bitgo/statics';
 import { StakingBuilder } from '../../../../src/coin/cgld/stakingBuilder';
 import { getOperationConfig } from '../../../../src/coin/cgld/stakingUtils';
 import { StakingOperationTypes } from '../../../../src/coin/baseCoin';
+import * as testData from '../../../resources/cgld/cgld';
 
 describe('Celo staking operations builder', function() {
   const coin = coins.get('tcgld');
@@ -15,6 +16,7 @@ describe('Celo staking operations builder', function() {
 
   const lockOperation = getOperationConfig(StakingOperationTypes.LOCK, coin.network.type);
   const unlockOperation = getOperationConfig(StakingOperationTypes.UNLOCK, coin.network.type);
+  const withdrawOperation = getOperationConfig(StakingOperationTypes.WITHDRAW, coin.network.type);
   const voteOperation = getOperationConfig(StakingOperationTypes.VOTE, coin.network.type);
   const activateOperation = getOperationConfig(StakingOperationTypes.ACTIVATE, coin.network.type);
 
@@ -30,6 +32,16 @@ describe('Celo staking operations builder', function() {
     const staking = builder.build();
     should.equal(staking.address, unlockOperation.contractAddress);
     staking.serialize().should.startWith(unlockOperation.methodId);
+    should.equal(staking.serialize(), testData.UNLOCK_DATA);
+  });
+
+  it('should build a staking withdraw operation', () => {
+    builder.type(StakingOperationTypes.WITHDRAW);
+    builder.index(0);
+    const staking = builder.build();
+    should.equal(staking.address, withdrawOperation.contractAddress);
+    staking.serialize().should.startWith(withdrawOperation.methodId);
+    should.equal(staking.serialize(), testData.WITHDRAW_DATA);
   });
 
   it('should build a staking vote operation', () => {

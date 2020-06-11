@@ -56,11 +56,13 @@ describe('Celo staking transaction builder', () => {
       .withdraw()
       .index(0)
       .type(StakingOperationTypes.WITHDRAW);
-    console.log((await txBuilder.build()).toBroadcastFormat());
-    const txJson = (await txBuilder.build()).toJson();
+    txBuilder.sign({ key: testData.PRIVATE_KEY });
+    const tx = await txBuilder.build();
+    const txJson = tx.toJson();
     should.equal(txJson.to, WithdrawOperation.contractAddress);
     txJson.data.should.startWith(WithdrawOperation.methodId);
     should.equal(txJson.data, testData.WITHDRAW_DATA);
+    should.equal(tx.toBroadcastFormat(), testData.WITHDRAW_BROADCAST_TX);
   });
 
   it('should build a vote transaction', async function() {
@@ -92,7 +94,7 @@ describe('Celo staking transaction builder', () => {
 
   it('should sign and build a lock transaction from serialized', async function() {
     const builder = getBuilder('tcgld') as Cgld.TransactionBuilder;
-    builder.from('0xed01843b9aca0083b8a1a08080809494c3e6675015d8479b648657e7ddfcd938489d0d6484f83d08ba82aef28080');
+    builder.from(testData.LOCK_BROADCAST_TX);
     builder.source(testData.KEYPAIR_PRV.getAddress());
     builder.sign({ key: testData.PRIVATE_KEY });
     const tx = await builder.build();
@@ -107,9 +109,7 @@ describe('Celo staking transaction builder', () => {
   it('should sign and build an unlock transaction from serialized', async function() {
     const builder = getBuilder('tcgld') as Cgld.TransactionBuilder;
     builder.type(TransactionType.StakingLock);
-    builder.from(
-      '0xf84d01843b9aca0083b8a1a08080809494c3e6675015d8479b648657e7ddfcd938489d0d80a46198e339000000000000000000000000000000000000000000000000000000000000006482aef28080',
-    );
+    builder.from(testData.UNLOCK_BROADCAST_TX);
     builder.source(testData.KEYPAIR_PRV.getAddress());
     builder.sign({ key: testData.PRIVATE_KEY });
     const tx = await builder.build();
@@ -121,13 +121,10 @@ describe('Celo staking transaction builder', () => {
     should.equal(tx.toBroadcastFormat(), testData.UNLOCK_BROADCAST_TX);
   });
 
-  it.skip('should sign and build a withdraw transaction from serialized', async function() {
-    //TODO: Fix this test
+  it('should sign and build a withdraw transaction from serialized', async function() {
     const builder = getBuilder('tcgld') as Cgld.TransactionBuilder;
     builder.type(TransactionType.StakingWithdraw);
-    builder.from(
-      '0xf84d01843b9aca0083b8a1a08080809494c3e6675015d8479b648657e7ddfcd938489d0d80a42e1a7d4d000000000000000000000000000000000000000000000000000000000000000082aef28080',
-    ); // TODO : get that from console.log((await txBuilder.build()).toBroadcastFormat());
+    builder.from(testData.WITHDRAW_BROADCAST_TX);
     builder.source(testData.KEYPAIR_PRV.getAddress());
     builder.sign({ key: testData.PRIVATE_KEY });
     const tx = await builder.build();
@@ -135,7 +132,7 @@ describe('Celo staking transaction builder', () => {
     should.equal(txJson.to, WithdrawOperation.contractAddress);
     txJson.data.should.startWith(WithdrawOperation.methodId);
     should.equal(txJson.from, testData.ACCOUNT1);
-    should.equal(tx.toBroadcastFormat(), testData.WITHDRAW_BROADCAST_TX); // TODO : testData still not changed
+    should.equal(tx.toBroadcastFormat(), testData.WITHDRAW_BROADCAST_TX);
   });
 
   it('should sign and build a vote transaction from serialized', async function() {

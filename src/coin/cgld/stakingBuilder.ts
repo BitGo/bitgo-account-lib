@@ -1,6 +1,6 @@
 import ethUtil from 'ethereumjs-util';
 import { BaseCoin as CoinConfig } from '@bitgo/statics/dist/src/base';
-import { isValidAmount, isValidEthAddress, getRawDecoded, getBufferedByteCode } from '../eth/utils';
+import { isValidAmount, isValidEthAddress, getRawDecoded, getBufferedByteCode, hexStringToNumber } from '../eth/utils';
 import { BuildTransactionError, InvalidParameterValueError, InvalidTransactionError } from '../baseCoin/errors';
 import { StakingOperationTypes } from '../baseCoin';
 import { StakingCall } from './stakingCall';
@@ -133,7 +133,7 @@ export class StakingBuilder {
 
   private buildWithdrawStaking(): StakingCall {
     const operation = getOperationConfig(this._type, this._coinConfig.network.type);
-    const params = [this._index.toFixed()];
+    const params = [this._index.toString()];
     return new StakingCall('0', operation.contractAddress, operation.methodId, operation.types, params);
   }
 
@@ -172,7 +172,7 @@ export class StakingBuilder {
           throw new BuildTransactionError(`Invalid withdraw decoded data: ${data}`);
         }
         const [index] = decoded;
-        this._index = ethUtil.bufferToHex(index);
+        this._index = hexStringToNumber(ethUtil.bufferToHex(index));
     }
   }
 

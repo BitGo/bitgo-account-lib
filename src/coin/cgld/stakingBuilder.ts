@@ -61,7 +61,7 @@ export class StakingBuilder {
   }
 
   index(index: number): this {
-    if (index > 0) {
+    if (index < 0) {
       throw new InvalidParameterValueError('Invalid index for withdrawal');
     }
     this._index = index;

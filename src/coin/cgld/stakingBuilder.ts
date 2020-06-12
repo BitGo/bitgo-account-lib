@@ -7,11 +7,10 @@ import { StakingCall } from './stakingCall';
 import { getOperationConfig, VoteMethodId, ActivateMethodId, UnlockMethodId, WithdrawMethodId } from './stakingUtils';
 
 export class StakingBuilder {
-  private readonly DEFAULT_ADDRESS = '0x0000000000000000000000000000000000000000';
   private _amount: string;
   private _validatorGroup: string;
-  private _lesser = this.DEFAULT_ADDRESS;
-  private _greater = this.DEFAULT_ADDRESS;
+  private _lesser = '';
+  private _greater = '';
   private _index: number;
   private _type: StakingOperationTypes;
   private _coinConfig: Readonly<CoinConfig>;

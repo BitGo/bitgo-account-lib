@@ -1,5 +1,3 @@
-import { Method } from 'protobufjs';
-
 /**
  * Internal metadata. Defines the type of transaction.
  */

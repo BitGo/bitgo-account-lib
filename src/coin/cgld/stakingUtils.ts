@@ -5,6 +5,7 @@ import { ContractMethodConfig } from '../eth/iface';
 export const LockMethodId = '0xf83d08ba';
 export const UnlockMethodId = '0x6198e339';
 export const VoteMethodId = '0x580d747a';
+export const UnvoteMethodId = '0x6e198475';
 export const ActivateMethodId = '0x1c5a9d9c';
 export const WithdrawMethodId = '0x2e1a7d4d';
 
@@ -48,6 +49,18 @@ const operations = {
       contractAddress: ElectionMainnetAddress,
       methodId: VoteMethodId,
       types: ['address', 'uint256', 'address', 'address'],
+    },
+  },
+  [StakingOperationTypes.UNVOTE]: {
+    [NetworkType.TESTNET]: {
+      contractAddress: ElectionTestnetAddress,
+      methodId: UnvoteMethodId,
+      types: ['address', 'uint256', 'address', 'address', 'uint256'],
+    },
+    [NetworkType.MAINNET]: {
+      contractAddress: ElectionMainnetAddress,
+      methodId: UnvoteMethodId,
+      types: ['address', 'uint256', 'address', 'address', 'uint256'],
     },
   },
   [StakingOperationTypes.ACTIVATE]: {

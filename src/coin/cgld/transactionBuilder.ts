@@ -28,6 +28,7 @@ export class TransactionBuilder extends Eth.TransactionBuilder {
         return this.buildLockStakeTransaction();
       case TransactionType.StakingUnlock:
       case TransactionType.StakingVote:
+      case TransactionType.StakingUnvote:
       case TransactionType.StakingActivate:
       case TransactionType.StakingWithdraw:
         return this.buildStakingTransaction();
@@ -58,6 +59,7 @@ export class TransactionBuilder extends Eth.TransactionBuilder {
         break;
       case TransactionType.StakingUnlock:
       case TransactionType.StakingVote:
+      case TransactionType.StakingUnvote:
       case TransactionType.StakingActivate:
       case TransactionType.StakingWithdraw:
         this._stakingBuilder = new StakingBuilder(this._coinConfig, transactionJson.data);
@@ -116,6 +118,18 @@ export class TransactionBuilder extends Eth.TransactionBuilder {
 
     if (!this._stakingBuilder) {
       this._stakingBuilder = new StakingBuilder(this._coinConfig).type(StakingOperationTypes.VOTE);
+    }
+
+    return this._stakingBuilder;
+  }
+
+  unvote(): StakingBuilder {
+    if (this._type !== TransactionType.StakingUnvote) {
+      throw new BuildTransactionError('Unvote can only be set for a staking transaction');
+    }
+
+    if (!this._stakingBuilder) {
+      this._stakingBuilder = new StakingBuilder(this._coinConfig).type(StakingOperationTypes.UNVOTE);
     }
 
     return this._stakingBuilder;

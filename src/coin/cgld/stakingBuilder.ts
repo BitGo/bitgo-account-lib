@@ -4,13 +4,21 @@ import { isValidAmount, isValidEthAddress, getRawDecoded, getBufferedByteCode, h
 import { BuildTransactionError, InvalidParameterValueError, InvalidTransactionError } from '../baseCoin/errors';
 import { StakingOperationTypes } from '../baseCoin';
 import { StakingCall } from './stakingCall';
-import { getOperationConfig, VoteMethodId, ActivateMethodId, UnlockMethodId, WithdrawMethodId } from './stakingUtils';
+import {
+  getOperationConfig,
+  VoteMethodId,
+  UnvoteMethodId,
+  ActivateMethodId,
+  UnlockMethodId,
+  WithdrawMethodId,
+} from './stakingUtils';
 
 export class StakingBuilder {
+  private readonly DEFAULT_ADDRESS = '0x0000000000000000000000000000000000000000';
   private _amount: string;
   private _validatorGroup: string;
-  private _lesser = '';
-  private _greater = '';
+  private _lesser = this.DEFAULT_ADDRESS;
+  private _greater = this.DEFAULT_ADDRESS;
   private _index: number;
   private _type: StakingOperationTypes;
   private _coinConfig: Readonly<CoinConfig>;
@@ -21,6 +29,8 @@ export class StakingBuilder {
       this.decodeStakingData(serializedData);
     }
   }
+
+  // region Staking properties
 
   type(type: StakingOperationTypes): this {
     this._type = type;
@@ -67,29 +77,33 @@ export class StakingBuilder {
     return this;
   }
 
+  // endregion
+
+  // region Staking building
+
   build(): StakingCall {
     this.validateMandatoryFields();
     switch (this._type) {
       case StakingOperationTypes.LOCK:
+        this.validateAmount();
         return this.buildLockStaking();
-      case StakingOperationTypes.UNLOCK:
-        return this.buildUnlockStaking();
       case StakingOperationTypes.VOTE:
-        this.validateVoteFields();
+        this.validateElectionFields();
         return this.buildVoteStaking();
       case StakingOperationTypes.ACTIVATE:
         this.validateGroup();
         return this.buildActivateStaking();
+      case StakingOperationTypes.UNVOTE:
+        this.validateUnvoteFields();
+        return this.buildUnvoteStaking();
+      case StakingOperationTypes.UNLOCK:
+        this.validateAmount();
+        return this.buildUnlockStaking();
       case StakingOperationTypes.WITHDRAW:
+        this.validateIndex();
         return this.buildWithdrawStaking();
       default:
         throw new InvalidTransactionError('Invalid staking operation: ' + this._type);
-    }
-  }
-
-  private validateMandatoryFields(): void {
-    if (!(this._type !== undefined && this._coinConfig)) {
-      throw new BuildTransactionError('Missing staking mandatory fields. Type and coin are required');
     }
   }
 
@@ -104,23 +118,15 @@ export class StakingBuilder {
     return new StakingCall('0', operation.contractAddress, operation.methodId, operation.types, params);
   }
 
-  private validateVoteFields(): void {
-    this.validateGroup();
-
-    if (this._lesser === this._greater) {
-      throw new BuildTransactionError('Greater and lesser values should not the same');
-    }
-  }
-
-  private validateGroup(): void {
-    if (!this._validatorGroup) {
-      throw new BuildTransactionError('Missing group to activate/vote for');
-    }
-  }
-
   private buildVoteStaking(): StakingCall {
     const operation = getOperationConfig(this._type, this._coinConfig.network.type);
     const params = [this._validatorGroup, this._amount, this._lesser, this._greater];
+    return new StakingCall('0', operation.contractAddress, operation.methodId, operation.types, params);
+  }
+
+  private buildUnvoteStaking(): StakingCall {
+    const operation = getOperationConfig(this._type, this._coinConfig.network.type);
+    const params = [this._validatorGroup, this._amount, this._lesser, this._greater, this._index.toString()];
     return new StakingCall('0', operation.contractAddress, operation.methodId, operation.types, params);
   }
 
@@ -136,6 +142,50 @@ export class StakingBuilder {
     return new StakingCall('0', operation.contractAddress, operation.methodId, operation.types, params);
   }
 
+  // endregion
+
+  // region Validation methods
+
+  private validateMandatoryFields(): void {
+    if (!(this._type !== undefined && this._coinConfig)) {
+      throw new BuildTransactionError('Missing staking mandatory fields. Type and coin are required');
+    }
+  }
+
+  private validateElectionFields(): void {
+    this.validateGroup();
+    this.validateAmount();
+    if (this._lesser === this._greater) {
+      throw new BuildTransactionError('Greater and lesser values should not the same');
+    }
+  }
+
+  private validateIndex(): void {
+    if (this._index === undefined) {
+      throw new BuildTransactionError('Missing index for staking transaction');
+    }
+  }
+
+  private validateAmount(): void {
+    if (this._amount === undefined) {
+      throw new BuildTransactionError('Missing amount for staking transaction');
+    }
+  }
+
+  private validateUnvoteFields(): void {
+    this.validateElectionFields();
+    this.validateIndex();
+  }
+
+  private validateGroup(): void {
+    if (!this._validatorGroup) {
+      throw new BuildTransactionError('Missing validator group for staking transaction');
+    }
+  }
+
+  // endregion
+
+  // region Deserialization methods
   private decodeStakingData(data: string): void {
     this.classifyStakingType(data);
 
@@ -151,6 +201,17 @@ export class StakingBuilder {
         this._validatorGroup = ethUtil.bufferToHex(groupToVote);
         this._lesser = ethUtil.bufferToHex(lesser);
         this._greater = ethUtil.bufferToHex(greater);
+        break;
+      case StakingOperationTypes.UNVOTE:
+        if (decoded.length != 5) {
+          throw new BuildTransactionError(`Invalid unvote decoded data: ${data}`);
+        }
+        const [groupToUnvote, amountUnvote, lesserUnvote, greaterUnvote, indexUnvote] = decoded;
+        this._validatorGroup = ethUtil.bufferToHex(groupToUnvote);
+        this._amount = ethUtil.bufferToHex(amountUnvote);
+        this._lesser = ethUtil.bufferToHex(lesserUnvote);
+        this._greater = ethUtil.bufferToHex(greaterUnvote);
+        this._index = hexStringToNumber(ethUtil.bufferToHex(indexUnvote));
         break;
       case StakingOperationTypes.ACTIVATE:
         if (decoded.length != 1) {
@@ -178,6 +239,8 @@ export class StakingBuilder {
   private classifyStakingType(data: string): void {
     if (data.startsWith(VoteMethodId)) {
       this._type = StakingOperationTypes.VOTE;
+    } else if (data.startsWith(UnvoteMethodId)) {
+      this._type = StakingOperationTypes.UNVOTE;
     } else if (data.startsWith(ActivateMethodId)) {
       this._type = StakingOperationTypes.ACTIVATE;
     } else if (data.startsWith(UnlockMethodId)) {
@@ -188,4 +251,6 @@ export class StakingBuilder {
       throw new BuildTransactionError(`Invalid staking bytecode: ${data}`);
     }
   }
+
+  // endregion
 }

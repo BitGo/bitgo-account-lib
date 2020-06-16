@@ -107,44 +107,89 @@ export class StakingBuilder {
     }
   }
 
-  // Locks gold to be used for voting /
-  // Fails if `group` is empty or not a validator group.
+  /**
+   * Builds a lock gold operation sending the amount on the transaction value field
+   *
+   * @returns {StakingCall} a lock gold operation using the LockedGold contract
+   */
   private buildLockStaking(): StakingCall {
     const operation = getOperationConfig(this._type, this._coinConfig.network.type);
     return new StakingCall(this._amount, operation.contractAddress, operation.methodId, operation.types, []);
   }
 
-  // Unlocks gold that becomes withdrawable after the unlocking period.
+  /**
+   * Builds an unlock gold operation sending the amount encoded on the data field
+   *
+   * params
+   * amount: amount of locked gold to be unlocked
+   *
+   * @returns {StakingCall} an unlock gold operation using the LockedGold contract
+   */
   private buildUnlockStaking(): StakingCall {
     const operation = getOperationConfig(this._type, this._coinConfig.network.type);
     const params = [this._amount];
     return new StakingCall('0', operation.contractAddress, operation.methodId, operation.types, params);
   }
 
-  // Increments the number of total and pending votes for `group`.
+  /**
+   * Builds a vote operation that uses locked gold to add pending votes for a validator group.
+   *
+   * params
+   * validatorGroup: group to vote for
+   * amount: amount of votes (locked gold) for the group
+   * lesser: validator group that has less votes than the validatorGroup
+   * greater: validator group that has more vots than the validatorGroup
+   *
+   * @returns {StakingCall} an vote operation using the Election contract
+   */
   private buildVoteStaking(): StakingCall {
     const operation = getOperationConfig(this._type, this._coinConfig.network.type);
     const params = [this._validatorGroup, this._amount, this._lesser, this._greater];
     return new StakingCall('0', operation.contractAddress, operation.methodId, operation.types, params);
   }
 
-  // Revokes active votes for a  group `validator`
-  // Fails if the account has not voted on a validator group.
+  /**
+   * Builds an unvote operation to revoke active votes for a validator group.
+   *
+   * params
+   * validatorGroup: group whose votes will be revoked
+   * amount: amount of votes (locked gold) that will be revoked
+   * lesser: validator group that has less votes than the validatorGroup
+   * greater: validator group that has more vots than the validatorGroup
+   * index: index of the validatorGroup on the list of groups the address has voted for
+   *
+   * @returns {StakingCall} an vote operation using the Election contract
+   */
   private buildUnvoteStaking(): StakingCall {
     const operation = getOperationConfig(this._type, this._coinConfig.network.type);
     const params = [this._validatorGroup, this._amount, this._lesser, this._greater, this._index.toString()];
     return new StakingCall('0', operation.contractAddress, operation.methodId, operation.types, params);
   }
 
-  // Converts `account`'s pending votes for `group` to active votes.
-  // Pending votes cannot be activated until an election has been held.
+  /**
+   * Builds an activate vote operation to change all the votes casted for a validator
+   * from 'pending' to 'active'
+   *
+   * params
+   * validatorGroup: group whose votes will be activated
+   *
+   * @returns {StakingCall} an activate votes operation
+   */
   private buildActivateStaking(): StakingCall {
     const operation = getOperationConfig(this._type, this._coinConfig.network.type);
     const params = [this._validatorGroup];
     return new StakingCall('0', operation.contractAddress, operation.methodId, operation.types, params);
   }
 
-  // Withdraws gold that has been unlocked after the unlocking period has passed.
+  /**
+   * Builds a withdraw operation for locked gold that has been unlocked
+   * after the unlocking period has passed.
+   *
+   * params
+   * index: index of the unlock operation whose unlocking period has passed.
+   *
+   * @returns {StakingCall} an activate votes operation
+   */
   private buildWithdrawStaking(): StakingCall {
     const operation = getOperationConfig(this._type, this._coinConfig.network.type);
     const params = [this._index.toString()];
@@ -244,7 +289,7 @@ export class StakingBuilder {
         this._index = hexStringToNumber(ethUtil.bufferToHex(index));
         break;
       default:
-        throw new BuildTransactionError(`Not valid stacking operation : ${this._type}`);
+        throw new BuildTransactionError(`Invalid staking data: ${this._type}`);
     }
   }
 

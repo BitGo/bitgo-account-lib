@@ -47,7 +47,7 @@ export class StakingBuilder {
 
   for(validatorGroup: string): this {
     if (!isValidEthAddress(validatorGroup)) {
-      throw new InvalidParameterValueError('Invalid address to activate/vote for');
+      throw new InvalidParameterValueError('Invalid validator group address');
     }
     this._validatorGroup = validatorGroup;
     return this;
@@ -71,7 +71,7 @@ export class StakingBuilder {
 
   index(index: number): this {
     if (index < 0) {
-      throw new InvalidParameterValueError('Invalid index for withdrawal');
+      throw new InvalidParameterValueError('Invalid index for staking transaction');
     }
     this._index = index;
     return this;

@@ -24,6 +24,7 @@ describe('Celo staking transaction builder', () => {
   const UnlockOperation = getOperationConfig(StakingOperationTypes.UNLOCK, coin.network.type);
   const WithdrawOperation = getOperationConfig(StakingOperationTypes.WITHDRAW, coin.network.type);
   const VoteOperation = getOperationConfig(StakingOperationTypes.VOTE, coin.network.type);
+  const UnvoteOperation = getOperationConfig(StakingOperationTypes.UNVOTE, coin.network.type);
   const ActivateOperation = getOperationConfig(StakingOperationTypes.ACTIVATE, coin.network.type);
 
   describe('lock', () => {
@@ -151,7 +152,58 @@ describe('Celo staking transaction builder', () => {
   });
 
   describe('unvote', () => {
-    //TODO: Add tests
+    it('should build a unvote transaction', async function() {
+      txBuilder.type(TransactionType.StakingUnvote);
+      txBuilder
+        .unvote()
+        .for('0x34084d6a4df32d9ad7395f4baad0db55c9c38145')
+        .lesser('0x1e5f2141701f2698b910d442ec7adee2af96f852')
+        .greater('0xa34da18dccd65a80b428815f57dc2075466e270e')
+        .amount('100')
+        .index(1);
+      txBuilder.sign({ key: testData.PRIVATE_KEY });
+      // const test = (await txBuilder.build()).toBroadcastFormat();
+      const txJson = (await txBuilder.build()).toJson();
+      should.equal(txJson.to, UnvoteOperation.contractAddress);
+      txJson.data.should.startWith(testData.UNVOTE_DATA);
+      should.equal(txJson.data, testData.UNVOTE_DATA);
+    });
+
+    it('should build a unvote transaction using the previous instance', async function() {
+      txBuilder.type(TransactionType.StakingUnvote);
+      txBuilder
+        .unvote()
+        .for('0x1e5f2141701f2698b910d442ec7adee2af96f852')
+        .lesser('0x34084d6a4df32d9ad7395f4baad0db55c9c38145')
+        .greater('0xa34da18dccd65a80b428815f57dc2075466e270e')
+        .amount('500')
+        .index(1);
+      txBuilder
+        .unvote()
+        .for('0x34084d6a4df32d9ad7395f4baad0db55c9c38145')
+        .lesser('0x1e5f2141701f2698b910d442ec7adee2af96f852')
+        .greater('0xa34da18dccd65a80b428815f57dc2075466e270e')
+        .amount('100')
+        .index(1);
+      txBuilder.sign({ key: testData.PRIVATE_KEY });
+      const txJson = (await txBuilder.build()).toJson();
+      should.equal(txJson.to, UnvoteOperation.contractAddress);
+      txJson.data.should.startWith(testData.UNVOTE_DATA);
+      should.equal(txJson.data, testData.UNVOTE_DATA);
+    });
+
+    it('should sign and build a unvote transaction from serialized', async function() {
+      const builder = getBuilder('tcgld') as Cgld.TransactionBuilder;
+      builder.from(testData.UNVOTE_BROADCAST_TX);
+      builder.source(testData.KEYPAIR_PRV.getAddress());
+      builder.sign({ key: testData.PRIVATE_KEY });
+      const tx = await builder.build();
+      const txJson = tx.toJson();
+      should.equal(txJson.to, UnvoteOperation.contractAddress);
+      should.equal(txJson.data, testData.UNVOTE_DATA);
+      should.equal(txJson.from, testData.ACCOUNT1);
+      should.equal(tx.toBroadcastFormat(), testData.UNVOTE_BROADCAST_TX);
+    });
   });
 
   describe('unlock', () => {
@@ -284,6 +336,18 @@ describe('Celo staking transaction builder', () => {
         },
         e => {
           return e.message === 'Unlock can only be set for Staking Unlock transactions type';
+        },
+      );
+    });
+
+    it('should fail to call unvote if it is not an staking unvote type transaction', () => {
+      txBuilder.type(TransactionType.AddressInitialization);
+      should.throws(
+        () => {
+          txBuilder.unvote();
+        },
+        e => {
+          return e.message === 'Unvote can only be set for a staking transaction';
         },
       );
     });

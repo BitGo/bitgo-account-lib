@@ -18,6 +18,7 @@ describe('Celo staking operations builder', function() {
   const unlockOperation = getOperationConfig(StakingOperationTypes.UNLOCK, coin.network.type);
   const withdrawOperation = getOperationConfig(StakingOperationTypes.WITHDRAW, coin.network.type);
   const voteOperation = getOperationConfig(StakingOperationTypes.VOTE, coin.network.type);
+  const unvoteOperation = getOperationConfig(StakingOperationTypes.UNVOTE, coin.network.type);
   const activateOperation = getOperationConfig(StakingOperationTypes.ACTIVATE, coin.network.type);
 
   it('should build a staking lock operation', () => {
@@ -46,9 +47,14 @@ describe('Celo staking operations builder', function() {
 
   it('should fail if the index is invalid', () => {
     builder.type(StakingOperationTypes.WITHDRAW);
-    should.throws(() => {
-      builder.index(-1);
-    }, 'Invalid index for withdrawal');
+    should.throws(
+      () => {
+        builder.index(-1);
+      },
+      e => {
+        return e.message === testData.INVALID_INDEX_ERROR;
+      },
+    );
   });
 
   it('should build a staking vote operation', () => {
@@ -88,6 +94,143 @@ describe('Celo staking operations builder', function() {
     );
   });
 
+  it('should build a staking unvote operation', () => {
+    builder.type(StakingOperationTypes.UNVOTE);
+    builder.for('0x34084d6a4df32d9ad7395f4baad0db55c9c38145');
+    builder.lesser('0x1e5f2141701f2698b910d442ec7adee2af96f852');
+    builder.greater('0xa34da18dccd65a80b428815f57dc2075466e270e');
+    builder.amount('1');
+    builder.index(0);
+    const staking = builder.build();
+    should.equal(staking.address, unvoteOperation.contractAddress);
+    should.equal(
+      staking.serialize(),
+      '0x6e19847500000000000000000000000034084d6a4df32d9ad7395f4baad0db55c9c3814500000000000000000000000000000000000000000000000000000000000000010000000000000000000000001e5f2141701f2698b910d442ec7adee2af96f852000000000000000000000000a34da18dccd65a80b428815f57dc2075466e270e0000000000000000000000000000000000000000000000000000000000000000',
+    );
+  });
+
+  it('should fail if the unvote index is invalid', () => {
+    builder.type(StakingOperationTypes.UNVOTE);
+    should.throws(
+      () => {
+        builder.index(-1);
+      },
+      e => {
+        return e.message === testData.INVALID_INDEX_ERROR;
+      },
+    );
+  });
+
+  it(`should throw error when trying to build unvote operation with missing 'index' `, () => {
+    builder.type(StakingOperationTypes.UNVOTE);
+    builder.for('0x34084d6a4df32d9ad7395f4baad0db55c9c38145');
+    builder.lesser('0x1e5f2141701f2698b910d442ec7adee2af96f852');
+    builder.greater('0xa34da18dccd65a80b428815f57dc2075466e270e');
+    builder.amount('1');
+    should.throws(
+      () => {
+        builder.build();
+      },
+      e => {
+        return e.message === testData.MISSING_INDEX_ERROR;
+      },
+    );
+  });
+
+  it(`should throw error when trying to build unvote operation with missing 'for' `, () => {
+    builder.type(StakingOperationTypes.UNVOTE);
+    builder.lesser('0x1e5f2141701f2698b910d442ec7adee2af96f852');
+    builder.greater('0xa34da18dccd65a80b428815f57dc2075466e270e');
+    builder.amount('1');
+    builder.index(1);
+    should.throws(
+      () => {
+        builder.build();
+      },
+      e => {
+        return e.message === testData.MISSING_GROUP_ERROR;
+      },
+    );
+  });
+
+  it(`should throw error when trying to build unvote operation with missing 'amount' `, () => {
+    builder = new StakingBuilder(coin);
+    builder.type(StakingOperationTypes.UNVOTE);
+    builder.lesser('0x1e5f2141701f2698b910d442ec7adee2af96f852');
+    builder.for('0x34084d6a4df32d9ad7395f4baad0db55c9c38145');
+    builder.greater('0xa34da18dccd65a80b428815f57dc2075466e270e');
+    builder.index(1);
+    should.throws(
+      () => {
+        builder.build();
+      },
+      e => {
+        return e.message === testData.MISSING_AMOUNT_ERROR;
+      },
+    );
+  });
+
+  it('should fail if the address to unvote for is not set', () => {
+    builder.type(StakingOperationTypes.UNVOTE);
+    should.throws(
+      () => {
+        builder.build();
+      },
+      e => {
+        return e.message === testData.MISSING_GROUP_ERROR;
+      },
+    );
+  });
+
+  it('should fail if the lesser or greater unvote are not set', () => {
+    builder.type(StakingOperationTypes.UNVOTE);
+    builder.for('0x34084d6a4df32d9ad7395f4baad0db55c9c38145');
+    should.throws(
+      () => {
+        builder.build();
+      },
+      e => {
+        return e.message === testData.GREATER_LESSER_ERROR;
+      },
+    );
+  });
+
+  it('should fail if the group to unvote address is invalid', () => {
+    builder.type(StakingOperationTypes.UNVOTE);
+    should.throws(
+      () => {
+        builder.for('invalidaddress');
+      },
+      e => {
+        return e.message === testData.INVALID_GROUP_ERROR;
+      },
+    );
+  });
+
+  it('should fail if the lesser unvote address is invalid', () => {
+    builder.type(StakingOperationTypes.UNVOTE);
+    should.throws(
+      () => {
+        builder.lesser('invalidaddress');
+      },
+      e => {
+        return e.message === testData.INVALID_LESSER_ERROR;
+      },
+    );
+  });
+
+  it('should fail if the greater unvote address is invalid', () => {
+    builder.type(StakingOperationTypes.UNVOTE);
+    should.throws(
+      () => {
+        builder.greater('invalidaddress');
+      },
+      e => {
+        return e.message === testData.INVALID_GREATER_ERROR;
+      },
+    );
+  });
+
   it('should build a staking activate operation', () => {
     builder.type(StakingOperationTypes.ACTIVATE);
     builder.for('0x34084d6a4df32d9ad7395f4baad0db55c9c38145');
@@ -98,51 +241,86 @@ describe('Celo staking operations builder', function() {
 
   it('should fail if the activate address is not set', () => {
     builder.type(StakingOperationTypes.ACTIVATE);
-    should.throws(() => {
-      builder.build();
-    }, 'Missing group to activate/vote for');
+    should.throws(
+      () => {
+        builder.build();
+      },
+      e => {
+        return e.message === testData.MISSING_GROUP_ERROR;
+      },
+    );
   });
 
   it('should fail if the address to vote for is not set', () => {
     builder.type(StakingOperationTypes.VOTE);
-    should.throws(() => {
-      builder.build();
-    }, 'Missing group to activate/vote for');
+    should.throws(
+      () => {
+        builder.build();
+      },
+      e => {
+        return e.message === testData.MISSING_GROUP_ERROR;
+      },
+    );
   });
 
   it('should fail if the lesser or greater are not set', () => {
     builder.type(StakingOperationTypes.VOTE);
     builder.for('0x34084d6a4df32d9ad7395f4baad0db55c9c38145');
-    should.throws(() => {
-      builder.build();
-    }, 'Greater and lesser values should not the same');
+    should.throws(
+      () => {
+        builder.build();
+      },
+      e => {
+        return e.message === testData.GREATER_LESSER_ERROR;
+      },
+    );
   });
 
   it('should fail if the group to vote address is invalid', () => {
     builder.type(StakingOperationTypes.VOTE);
-    should.throws(() => {
-      builder.for('invalidaddress');
-    }, 'Invalid address to vote for');
+    should.throws(
+      () => {
+        builder.for('invalidaddress');
+      },
+      e => {
+        return e.message === testData.INVALID_GROUP_ERROR;
+      },
+    );
   });
 
   it('should fail if the lesser address is invalid', () => {
     builder.type(StakingOperationTypes.VOTE);
-    should.throws(() => {
-      builder.lesser('invalidaddress');
-    }, 'Invalid address for lesser');
+    should.throws(
+      () => {
+        builder.lesser('invalidaddress');
+      },
+      e => {
+        return e.message === testData.INVALID_LESSER_ERROR;
+      },
+    );
   });
 
   it('should fail if the greater address is invalid', () => {
     builder.type(StakingOperationTypes.VOTE);
-    should.throws(() => {
-      builder.greater('invalidaddress');
-    }, 'Invalid address for greater');
+    should.throws(
+      () => {
+        builder.greater('invalidaddress');
+      },
+      e => {
+        return e.message === testData.INVALID_GREATER_ERROR;
+      },
+    );
   });
 
   it('should fail if amount is invalid number', () => {
-    should.throws(() => {
-      builder.amount('asd');
-    }, 'Invalid value for stake transaction');
+    should.throws(
+      () => {
+        builder.amount('asd');
+      },
+      e => {
+        return e.message === testData.INVALID_VALUE_ERROR;
+      },
+    );
   });
 
   it('should fail to build if type is not supported', function() {
@@ -153,7 +331,7 @@ describe('Celo staking operations builder', function() {
         builder.build();
       },
       e => {
-        return e.message === 'Invalid staking operation: 100';
+        return e.message === testData.INVALID_OPERATION_100;
       },
     );
   });

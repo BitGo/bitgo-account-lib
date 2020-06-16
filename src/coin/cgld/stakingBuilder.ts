@@ -210,7 +210,7 @@ export class StakingBuilder {
     this.validateGroup();
     this.validateAmount();
     if (this._lesser === this._greater) {
-      throw new BuildTransactionError('Greater and lesser values should not the same');
+      throw new BuildTransactionError('Greater and lesser values should not be the same');
     }
   }
 

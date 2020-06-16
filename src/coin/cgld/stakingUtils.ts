@@ -2,12 +2,12 @@ import { NetworkType } from '@bitgo/statics';
 import { StakingOperationTypes } from '../baseCoin';
 import { ContractMethodConfig } from '../eth/iface';
 
-export const LockMethodId = '0xf83d08ba';
-export const UnlockMethodId = '0x6198e339';
-export const VoteMethodId = '0x580d747a';
-export const UnvoteMethodId = '0x6e198475';
-export const ActivateMethodId = '0x1c5a9d9c';
-export const WithdrawMethodId = '0x2e1a7d4d';
+export const LockMethodId = '0xf83d08ba'; // lock()
+export const UnlockMethodId = '0x6198e339'; // unlock()
+export const VoteMethodId = '0x580d747a'; // vote()
+export const UnvoteMethodId = '0x6e198475'; // revokeActive()
+export const ActivateMethodId = '0x1c5a9d9c'; // activate()
+export const WithdrawMethodId = '0x2e1a7d4d'; // withdraw()
 
 const LockedGoldTestnetAddress = '0x94c3e6675015d8479b648657e7ddfcd938489d0d';
 const LockedGoldMainnetAddress = '0x6cc083aed9e3ebe302a6336dbc7c921c9f03349e';

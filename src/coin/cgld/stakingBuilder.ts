@@ -107,35 +107,44 @@ export class StakingBuilder {
     }
   }
 
+  // Locks gold to be used for voting /
+  // Fails if `group` is empty or not a validator group.
   private buildLockStaking(): StakingCall {
     const operation = getOperationConfig(this._type, this._coinConfig.network.type);
     return new StakingCall(this._amount, operation.contractAddress, operation.methodId, operation.types, []);
   }
 
+  // Unlocks gold that becomes withdrawable after the unlocking period.
   private buildUnlockStaking(): StakingCall {
     const operation = getOperationConfig(this._type, this._coinConfig.network.type);
     const params = [this._amount];
     return new StakingCall('0', operation.contractAddress, operation.methodId, operation.types, params);
   }
 
+  // Increments the number of total and pending votes for `group`.
   private buildVoteStaking(): StakingCall {
     const operation = getOperationConfig(this._type, this._coinConfig.network.type);
     const params = [this._validatorGroup, this._amount, this._lesser, this._greater];
     return new StakingCall('0', operation.contractAddress, operation.methodId, operation.types, params);
   }
 
+  // Revokes active votes for a  group `validator`
+  // Fails if the account has not voted on a validator group.
   private buildUnvoteStaking(): StakingCall {
     const operation = getOperationConfig(this._type, this._coinConfig.network.type);
     const params = [this._validatorGroup, this._amount, this._lesser, this._greater, this._index.toString()];
     return new StakingCall('0', operation.contractAddress, operation.methodId, operation.types, params);
   }
 
+  // Converts `account`'s pending votes for `group` to active votes.
+  // Pending votes cannot be activated until an election has been held.
   private buildActivateStaking(): StakingCall {
     const operation = getOperationConfig(this._type, this._coinConfig.network.type);
     const params = [this._validatorGroup];
     return new StakingCall('0', operation.contractAddress, operation.methodId, operation.types, params);
   }
 
+  // Withdraws gold that has been unlocked after the unlocking period has passed.
   private buildWithdrawStaking(): StakingCall {
     const operation = getOperationConfig(this._type, this._coinConfig.network.type);
     const params = [this._index.toString()];
@@ -233,6 +242,9 @@ export class StakingBuilder {
         }
         const [index] = decoded;
         this._index = hexStringToNumber(ethUtil.bufferToHex(index));
+        break;
+      default:
+        throw new BuildTransactionError(`Not valid stacking operation : ${this._type}`);
     }
   }
 

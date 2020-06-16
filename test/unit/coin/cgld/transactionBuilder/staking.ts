@@ -235,7 +235,7 @@ describe('Celo staking transaction builder', () => {
       const tx = await builder.build();
       const txJson = tx.toJson();
       should.equal(txJson.to, UnlockOperation.contractAddress);
-      txJson.data.should.startWith(UnlockOperation.methodId); // TODO : should.equal(txJson.data, UnlockOperation.methodId)
+      txJson.data.should.startWith(UnlockOperation.methodId);
       should.equal(txJson.data, testData.UNLOCK_DATA);
       should.equal(txJson.from, testData.ACCOUNT1);
       should.equal(tx.toBroadcastFormat(), testData.UNLOCK_BROADCAST_TX);

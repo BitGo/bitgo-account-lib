@@ -47,7 +47,7 @@ describe('Celo staking transaction builder', () => {
 
     it('should sign and build a lock transaction from serialized', async function() {
       const builder = getBuilder('tcgld') as Cgld.TransactionBuilder;
-      builder.from('0xed01843b9aca0083b8a1a08080809494c3e6675015d8479b648657e7ddfcd938489d0d6484f83d08ba82aef28080');
+      builder.from(testData.LOCK_SERIALIZED);
       builder.source(testData.KEYPAIR_PRV.getAddress());
       builder.sign({ key: testData.PRIVATE_KEY });
       const tx = await builder.build();
@@ -65,30 +65,30 @@ describe('Celo staking transaction builder', () => {
       txBuilder.type(TransactionType.StakingVote);
       txBuilder
         .vote()
-        .group('0x34084d6a4df32d9ad7395f4baad0db55c9c38145')
-        .lesser('0x1e5f2141701f2698b910d442ec7adee2af96f852')
-        .greater('0xa34da18dccd65a80b428815f57dc2075466e270e')
+        .group(testData.GROUP_ADDRESS)
+        .lesser(testData.LESSER_ADDRESS)
+        .greater(testData.GREATER_ADDRESS)
         .amount('100');
       txBuilder.sign({ key: testData.PRIVATE_KEY });
       const txJson = (await txBuilder.build()).toJson();
       should.equal(txJson.to, VoteOperation.contractAddress);
-      txJson.data.should.startWith(testData.VOTE_DATA);
-      should.equal(txJson.data, testData.VOTE_DATA);
+      txJson.data.should.startWith(testData.VOTE_DATA_2);
+      should.equal(txJson.data, testData.VOTE_DATA_2);
     });
 
     it('should build a vote transaction using the previous instance', async function() {
       txBuilder.type(TransactionType.StakingVote);
       txBuilder
         .vote()
-        .group('0x1e5f2141701f2698b910d442ec7adee2af96f852')
-        .lesser('0x34084d6a4df32d9ad7395f4baad0db55c9c38145')
-        .greater('0xa34da18dccd65a80b428815f57dc2075466e270e')
+        .group(testData.GROUP_ADDRESS_2)
+        .lesser(testData.LESSER_ADDRESS)
+        .greater(testData.GREATER_ADDRESS)
         .amount('500');
       txBuilder
         .vote()
-        .group('0x34084d6a4df32d9ad7395f4baad0db55c9c38145')
-        .lesser('0x1e5f2141701f2698b910d442ec7adee2af96f852')
-        .greater('0xa34da18dccd65a80b428815f57dc2075466e270e')
+        .group(testData.GROUP_ADDRESS)
+        .lesser(testData.LESSER_ADDRESS_2)
+        .greater(testData.GREATER_ADDRESS_2)
         .amount('100');
       txBuilder.sign({ key: testData.PRIVATE_KEY });
       const txJson = (await txBuilder.build()).toJson();
@@ -105,7 +105,7 @@ describe('Celo staking transaction builder', () => {
       const tx = await builder.build();
       const txJson = tx.toJson();
       should.equal(txJson.to, VoteOperation.contractAddress);
-      should.equal(txJson.data, testData.VOTE_DATA);
+      should.equal(txJson.data, testData.VOTE_DATA_2);
       should.equal(txJson.from, testData.ACCOUNT1);
       should.equal(tx.toBroadcastFormat(), testData.VOTE_BROADCAST_TX);
     });
@@ -114,7 +114,7 @@ describe('Celo staking transaction builder', () => {
   describe('activate', () => {
     it('should build an activate transaction', async function() {
       txBuilder.type(TransactionType.StakingActivate);
-      txBuilder.activate().group('0x34084d6a4df32d9ad7395f4baad0db55c9c38145');
+      txBuilder.activate().group(testData.GROUP_ADDRESS);
       txBuilder.sign({ key: testData.PRIVATE_KEY });
       const tx = await txBuilder.build();
       const txJson = tx.toJson();
@@ -126,8 +126,8 @@ describe('Celo staking transaction builder', () => {
 
     it('should build an activate transaction from a previous instance', async function() {
       txBuilder.type(TransactionType.StakingActivate);
-      txBuilder.activate().group('0x1e5f2141701f2698b910d442ec7adee2af96f852');
-      txBuilder.activate().group('0x34084d6a4df32d9ad7395f4baad0db55c9c38145');
+      txBuilder.activate().group(testData.GROUP_ADDRESS_2);
+      txBuilder.activate().group(testData.GROUP_ADDRESS);
       txBuilder.sign({ key: testData.PRIVATE_KEY });
       const tx = await txBuilder.build();
       const txJson = tx.toJson();
@@ -156,9 +156,9 @@ describe('Celo staking transaction builder', () => {
       txBuilder.type(TransactionType.StakingUnvote);
       txBuilder
         .unvote()
-        .group('0x34084d6a4df32d9ad7395f4baad0db55c9c38145')
-        .lesser('0x1e5f2141701f2698b910d442ec7adee2af96f852')
-        .greater('0xa34da18dccd65a80b428815f57dc2075466e270e')
+        .group(testData.GROUP_ADDRESS)
+        .lesser(testData.LESSER_ADDRESS)
+        .greater(testData.GREATER_ADDRESS)
         .amount('100')
         .index(1);
       txBuilder.sign({ key: testData.PRIVATE_KEY });
@@ -172,23 +172,23 @@ describe('Celo staking transaction builder', () => {
       txBuilder.type(TransactionType.StakingUnvote);
       txBuilder
         .unvote()
-        .group('0x1e5f2141701f2698b910d442ec7adee2af96f852')
-        .lesser('0x34084d6a4df32d9ad7395f4baad0db55c9c38145')
-        .greater('0xa34da18dccd65a80b428815f57dc2075466e270e')
+        .group(testData.GROUP_ADDRESS_2)
+        .lesser(testData.LESSER_ADDRESS)
+        .greater(testData.GREATER_ADDRESS)
         .amount('500')
         .index(1);
       txBuilder
         .unvote()
-        .group('0x34084d6a4df32d9ad7395f4baad0db55c9c38145')
-        .lesser('0x1e5f2141701f2698b910d442ec7adee2af96f852')
-        .greater('0xa34da18dccd65a80b428815f57dc2075466e270e')
+        .group(testData.GROUP_ADDRESS)
+        .lesser(testData.LESSER_ADDRESS_2)
+        .greater(testData.GREATER_ADDRESS_2)
         .amount('100')
         .index(1);
       txBuilder.sign({ key: testData.PRIVATE_KEY });
       const txJson = (await txBuilder.build()).toJson();
       should.equal(txJson.to, UnvoteOperation.contractAddress);
-      txJson.data.should.startWith(testData.UNVOTE_DATA);
-      should.equal(txJson.data, testData.UNVOTE_DATA);
+      txJson.data.should.startWith(testData.UNVOTE_DATA_2);
+      should.equal(txJson.data, testData.UNVOTE_DATA_2);
     });
 
     it('should sign and build a unvote transaction from serialized', async function() {
@@ -297,9 +297,7 @@ describe('Celo staking transaction builder', () => {
         () => {
           txBuilder.lock();
         },
-        e => {
-          return e.message === 'Lock can only be set for Staking Lock transactions type';
-        },
+        e => e.message === testData.LOCK_TRANSACTION_TYPE_ERROR,
       );
     });
 
@@ -309,9 +307,7 @@ describe('Celo staking transaction builder', () => {
         () => {
           txBuilder.vote();
         },
-        e => {
-          return e.message === 'Votes can only be set for a staking transaction';
-        },
+        e => e.message === testData.VOTE_TRANSACTION_TYPE_ERROR,
       );
     });
 
@@ -321,9 +317,7 @@ describe('Celo staking transaction builder', () => {
         () => {
           txBuilder.activate();
         },
-        e => {
-          return e.message === 'Activation can only be set for a staking transaction';
-        },
+        e => e.message === testData.ACTIVATION_TRANSACTION_TYPE_ERROR,
       );
     });
 
@@ -333,9 +327,7 @@ describe('Celo staking transaction builder', () => {
         () => {
           txBuilder.unlock();
         },
-        e => {
-          return e.message === 'Unlock can only be set for Staking Unlock transactions type';
-        },
+        e => e.message === testData.UNLOCK_TRANSACTION_TYPE_ERROR,
       );
     });
 
@@ -345,9 +337,7 @@ describe('Celo staking transaction builder', () => {
         () => {
           txBuilder.unvote();
         },
-        e => {
-          return e.message === 'Unvote can only be set for a staking transaction';
-        },
+        e => e.message === testData.UNVOTE_TRANSACTION_TYPE_ERROR,
       );
     });
 
@@ -357,9 +347,7 @@ describe('Celo staking transaction builder', () => {
         () => {
           txBuilder.withdraw();
         },
-        e => {
-          return e.message === 'Withdraw can only be set for a staking transaction';
-        },
+        e => e.message === testData.WITHDRAW_TRANSACTION_TYPE_ERROR,
       );
     });
 

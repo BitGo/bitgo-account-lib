@@ -88,7 +88,7 @@ export class TransactionBuilder extends Eth.TransactionBuilder {
 
   /**
    * Gets the staking vote builder if exist, or creates a new one for this transaction and returns it
-   * requires: for (validator group), lesser, greater, amount
+   * requires: group, lesser, greater, amount
    *
    * @returns {StakingBuilder} the staking builder
    */
@@ -102,7 +102,7 @@ export class TransactionBuilder extends Eth.TransactionBuilder {
 
   /**
    * Gets the staking activate builder if exist, or creates a new one for this transaction and returns it
-   * requires: for (validator group)
+   * requires: group
    *
    * @returns {StakingBuilder} the staking builder
    */
@@ -130,7 +130,7 @@ export class TransactionBuilder extends Eth.TransactionBuilder {
 
   /**
    * Gets the staking unvote builder if exist, or creates a new one for this transaction and returns it
-   * requires: for (validator group), lesser, greater, amount, index
+   * requires: group, lesser, greater, amount, index
    *
    * @returns {StakingBuilder} the staking builder
    */

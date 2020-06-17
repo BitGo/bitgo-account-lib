@@ -45,7 +45,7 @@ export class StakingBuilder {
     return this;
   }
 
-  for(validatorGroup: string): this {
+  group(validatorGroup: string): this {
     if (!isValidEthAddress(validatorGroup)) {
       throw new InvalidParameterValueError('Invalid validator group address');
     }
@@ -247,7 +247,7 @@ export class StakingBuilder {
     const decoded = getRawDecoded(operation.types, getBufferedByteCode(operation.methodId, data));
     switch (this._type) {
       case StakingOperationTypes.VOTE:
-        if (decoded.length != 4) {
+        if (decoded.length !== 4) {
           throw new BuildTransactionError(`Invalid vote decoded data: ${data}`);
         }
         const [groupToVote, amount, lesser, greater] = decoded;
@@ -257,7 +257,7 @@ export class StakingBuilder {
         this._greater = ethUtil.bufferToHex(greater);
         break;
       case StakingOperationTypes.UNVOTE:
-        if (decoded.length != 5) {
+        if (decoded.length !== 5) {
           throw new BuildTransactionError(`Invalid unvote decoded data: ${data}`);
         }
         const [groupToUnvote, amountUnvote, lesserUnvote, greaterUnvote, indexUnvote] = decoded;
@@ -268,21 +268,21 @@ export class StakingBuilder {
         this._index = hexStringToNumber(ethUtil.bufferToHex(indexUnvote));
         break;
       case StakingOperationTypes.ACTIVATE:
-        if (decoded.length != 1) {
+        if (decoded.length !== 1) {
           throw new BuildTransactionError(`Invalid activate decoded data: ${data}`);
         }
         const [groupToActivate] = decoded;
         this._validatorGroup = ethUtil.bufferToHex(groupToActivate);
         break;
       case StakingOperationTypes.UNLOCK:
-        if (decoded.length != 1) {
+        if (decoded.length !== 1) {
           throw new BuildTransactionError(`Invalid unlock decoded data: ${data}`);
         }
         const [decodedAmount] = decoded;
         this._amount = ethUtil.bufferToHex(decodedAmount);
         break;
       case StakingOperationTypes.WITHDRAW:
-        if (decoded.length != 1) {
+        if (decoded.length !== 1) {
           throw new BuildTransactionError(`Invalid withdraw decoded data: ${data}`);
         }
         const [index] = decoded;

@@ -65,7 +65,7 @@ describe('Celo staking transaction builder', () => {
       txBuilder.type(TransactionType.StakingVote);
       txBuilder
         .vote()
-        .for('0x34084d6a4df32d9ad7395f4baad0db55c9c38145')
+        .group('0x34084d6a4df32d9ad7395f4baad0db55c9c38145')
         .lesser('0x1e5f2141701f2698b910d442ec7adee2af96f852')
         .greater('0xa34da18dccd65a80b428815f57dc2075466e270e')
         .amount('100');
@@ -80,13 +80,13 @@ describe('Celo staking transaction builder', () => {
       txBuilder.type(TransactionType.StakingVote);
       txBuilder
         .vote()
-        .for('0x1e5f2141701f2698b910d442ec7adee2af96f852')
+        .group('0x1e5f2141701f2698b910d442ec7adee2af96f852')
         .lesser('0x34084d6a4df32d9ad7395f4baad0db55c9c38145')
         .greater('0xa34da18dccd65a80b428815f57dc2075466e270e')
         .amount('500');
       txBuilder
         .vote()
-        .for('0x34084d6a4df32d9ad7395f4baad0db55c9c38145')
+        .group('0x34084d6a4df32d9ad7395f4baad0db55c9c38145')
         .lesser('0x1e5f2141701f2698b910d442ec7adee2af96f852')
         .greater('0xa34da18dccd65a80b428815f57dc2075466e270e')
         .amount('100');
@@ -114,7 +114,7 @@ describe('Celo staking transaction builder', () => {
   describe('activate', () => {
     it('should build an activate transaction', async function() {
       txBuilder.type(TransactionType.StakingActivate);
-      txBuilder.activate().for('0x34084d6a4df32d9ad7395f4baad0db55c9c38145');
+      txBuilder.activate().group('0x34084d6a4df32d9ad7395f4baad0db55c9c38145');
       txBuilder.sign({ key: testData.PRIVATE_KEY });
       const tx = await txBuilder.build();
       const txJson = tx.toJson();
@@ -126,8 +126,8 @@ describe('Celo staking transaction builder', () => {
 
     it('should build an activate transaction from a previous instance', async function() {
       txBuilder.type(TransactionType.StakingActivate);
-      txBuilder.activate().for('0x1e5f2141701f2698b910d442ec7adee2af96f852');
-      txBuilder.activate().for('0x34084d6a4df32d9ad7395f4baad0db55c9c38145');
+      txBuilder.activate().group('0x1e5f2141701f2698b910d442ec7adee2af96f852');
+      txBuilder.activate().group('0x34084d6a4df32d9ad7395f4baad0db55c9c38145');
       txBuilder.sign({ key: testData.PRIVATE_KEY });
       const tx = await txBuilder.build();
       const txJson = tx.toJson();
@@ -156,13 +156,12 @@ describe('Celo staking transaction builder', () => {
       txBuilder.type(TransactionType.StakingUnvote);
       txBuilder
         .unvote()
-        .for('0x34084d6a4df32d9ad7395f4baad0db55c9c38145')
+        .group('0x34084d6a4df32d9ad7395f4baad0db55c9c38145')
         .lesser('0x1e5f2141701f2698b910d442ec7adee2af96f852')
         .greater('0xa34da18dccd65a80b428815f57dc2075466e270e')
         .amount('100')
         .index(1);
       txBuilder.sign({ key: testData.PRIVATE_KEY });
-      // const test = (await txBuilder.build()).toBroadcastFormat();
       const txJson = (await txBuilder.build()).toJson();
       should.equal(txJson.to, UnvoteOperation.contractAddress);
       txJson.data.should.startWith(testData.UNVOTE_DATA);
@@ -173,14 +172,14 @@ describe('Celo staking transaction builder', () => {
       txBuilder.type(TransactionType.StakingUnvote);
       txBuilder
         .unvote()
-        .for('0x1e5f2141701f2698b910d442ec7adee2af96f852')
+        .group('0x1e5f2141701f2698b910d442ec7adee2af96f852')
         .lesser('0x34084d6a4df32d9ad7395f4baad0db55c9c38145')
         .greater('0xa34da18dccd65a80b428815f57dc2075466e270e')
         .amount('500')
         .index(1);
       txBuilder
         .unvote()
-        .for('0x34084d6a4df32d9ad7395f4baad0db55c9c38145')
+        .group('0x34084d6a4df32d9ad7395f4baad0db55c9c38145')
         .lesser('0x1e5f2141701f2698b910d442ec7adee2af96f852')
         .greater('0xa34da18dccd65a80b428815f57dc2075466e270e')
         .amount('100')

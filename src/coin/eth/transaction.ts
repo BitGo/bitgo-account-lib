@@ -10,7 +10,6 @@ import { KeyPair } from './keyPair';
 import { EthLikeTransactionData, TxData } from './iface';
 import { EthTransactionData } from './types';
 import { classifyTransaction, decodeTransferData, getToken, hasSignature, toStringSig } from './utils';
-import { getCommon } from './utils';
 
 const UNSUPPORTED_COIN_NAME = 'unsupported';
 
@@ -23,10 +22,6 @@ export class Transaction extends BaseTransaction {
   protected _common: EthereumCommon;
 
   protected _transactionData?: EthLikeTransactionData;
-
-  protected get _common(): EthereumCommon {
-    return getCommon(this._coinConfig.network.type);
-  }
 
   /**
    * return a new Transaction initialized with the serialized tx string

@@ -1,4 +1,5 @@
 import { BaseCoin as CoinConfig } from '@bitgo/statics/dist/src/base';
+import EthereumCommon from 'ethereumjs-common';
 import BigNumber from 'bignumber.js';
 import { RLP } from 'ethers/utils';
 import * as Crypto from '../../utils/crypto';
@@ -16,6 +17,7 @@ import { Fee, SignatureParts, TxData } from './iface';
 import {
   calculateForwarderAddress,
   getAddressInitializationData,
+  getCommon,
   getContractData,
   hasSignature,
   isValidEthAddress,
@@ -28,9 +30,9 @@ const DEFAULT_M = 3;
  */
 export class TransactionBuilder extends BaseTransactionBuilder {
   protected _type: TransactionType;
+  protected _common: EthereumCommon;
   private _transaction: Transaction;
   private _sourceKeyPair: KeyPair;
-  private _chainId: number;
   private _counter: number;
   private _fee: Fee;
 
@@ -52,10 +54,11 @@ export class TransactionBuilder extends BaseTransactionBuilder {
    */
   constructor(_coinConfig: Readonly<CoinConfig>) {
     super(_coinConfig);
+    this._common = getCommon(this._coinConfig.network.type);
     this._type = TransactionType.Send;
     this._counter = 0;
     this._walletOwnerAddresses = [];
-    this.transaction = new Transaction(this._coinConfig);
+    this.transaction = new Transaction(this._coinConfig, this._common);
   }
 
   /** @inheritdoc */
@@ -94,7 +97,7 @@ export class TransactionBuilder extends BaseTransactionBuilder {
   protected fromImplementation(rawTransaction: string): Transaction {
     let tx: Transaction;
     if (/^0x?[0-9a-f]{1,}$/.test(rawTransaction.toLowerCase())) {
-      tx = Transaction.fromSerialized(this._coinConfig, rawTransaction);
+      tx = Transaction.fromSerialized(this._coinConfig, this._common, rawTransaction);
       this.loadBuilderInput(tx.toJson());
     } else {
       const txData = JSON.parse(rawTransaction);
@@ -113,7 +116,6 @@ export class TransactionBuilder extends BaseTransactionBuilder {
     this.type(decodedType);
     this.fee({ fee: transactionJson.gasPrice, gasLimit: transactionJson.gasLimit });
     this.counter(transactionJson.nonce);
-    this.chainId(Number(transactionJson.chainId));
     if (hasSignature(transactionJson)) {
       this._txSignature = { v: transactionJson.v!, r: transactionJson.r!, s: transactionJson.s! };
     }
@@ -203,8 +205,8 @@ export class TransactionBuilder extends BaseTransactionBuilder {
     if (this._fee === undefined) {
       throw new BuildTransactionError('Invalid transaction: missing fee');
     }
-    if (this._chainId === undefined) {
-      throw new BuildTransactionError('Invalid transaction: missing chain id');
+    if (this._common === undefined) {
+      throw new BuildTransactionError('Invalid transaction: network common');
     }
     if (this._counter === undefined) {
       throw new BuildTransactionError('Invalid transaction: missing address counter');
@@ -216,31 +218,14 @@ export class TransactionBuilder extends BaseTransactionBuilder {
     this.validateBaseTransactionFields();
     switch (this._type) {
       case TransactionType.WalletInitialization:
-        // assume sanitization happened in the builder function, just check that all required fields are set
-        if (this._walletOwnerAddresses === undefined) {
-          throw new BuildTransactionError('Invalid transaction: missing wallet owners');
-        }
-
-        if (this._walletOwnerAddresses.length !== 3) {
-          throw new BuildTransactionError(
-            `Invalid transaction: wrong number of owners -- required: 3, ` +
-              `found: ${this._walletOwnerAddresses.length}`,
-          );
-        }
+        this.validateWalletInitializationFields();
         break;
       case TransactionType.Send:
-        if (this._contractAddress === undefined) {
-          throw new BuildTransactionError('Invalid transaction: missing contract address');
-        }
+        this.validateContractAddress();
         break;
       case TransactionType.AddressInitialization:
-        if (this._contractAddress === undefined) {
-          throw new BuildTransactionError('Invalid transaction: missing contract address');
-        }
-
-        if (this._contractCounter === undefined) {
-          throw new BuildTransactionError('Invalid transaction: missing contract counter');
-        }
+        this.validateContractAddress();
+        this.validateContractCounter();
         break;
       case TransactionType.StakingLock:
       case TransactionType.StakingUnlock:
@@ -254,6 +239,39 @@ export class TransactionBuilder extends BaseTransactionBuilder {
     }
   }
 
+  /**
+   * Check wallet owner addresses for wallet initialization transactions are valid or throw.
+   */
+  private validateWalletInitializationFields(): void {
+    if (this._walletOwnerAddresses === undefined) {
+      throw new BuildTransactionError('Invalid transaction: missing wallet owners');
+    }
+
+    if (this._walletOwnerAddresses.length !== 3) {
+      throw new BuildTransactionError(
+        `Invalid transaction: wrong number of owners -- required: 3, found: ${this._walletOwnerAddresses.length}`,
+      );
+    }
+  }
+
+  /**
+   * Check if a contract address for the wallet was defined or throw.
+   */
+  private validateContractAddress(): void {
+    if (this._contractAddress === undefined) {
+      throw new BuildTransactionError('Invalid transaction: missing contract address');
+    }
+  }
+
+  /**
+   * Check if the contract nonce or countar was defined or throw.
+   */
+  private validateContractCounter(): void {
+    if (this._contractCounter === undefined) {
+      throw new BuildTransactionError('Invalid transaction: missing contract counter');
+    }
+  }
+
   validateValue(value: BigNumber): void {
     if (value.isLessThan(0)) {
       throw new BuildTransactionError('Value cannot be below less than zero');
@@ -262,15 +280,6 @@ export class TransactionBuilder extends BaseTransactionBuilder {
   }
 
   // region Common builder methods
-  /**
-   * Set the transaction chain id.
-   *
-   * @param {number} chainId A block hash to use as branch reference
-   */
-  chainId(chainId: number): void {
-    this._chainId = chainId;
-    // TODO: Infer it from coinConfig
-  }
 
   /**
    * The type of transaction being built.
@@ -313,7 +322,7 @@ export class TransactionBuilder extends BaseTransactionBuilder {
       gasPrice: this._fee.fee,
       nonce: this._counter,
       data: data,
-      chainId: this._chainId.toString(),
+      chainId: this._common.chainId().toString(),
       value: '0',
     };
   }

@@ -1,4 +1,5 @@
 import { Buffer } from 'buffer';
+import assert from 'assert';
 import {
   addHexPrefix,
   bufferToHex,
@@ -9,12 +10,12 @@ import {
   stripHexPrefix,
   toBuffer,
 } from 'ethereumjs-util';
-import { coins, BaseCoin, Erc20Coin, CeloCoin } from '@bitgo/statics';
+import { coins, BaseCoin, Erc20Coin, CeloCoin, NetworkType } from '@bitgo/statics';
 import EthereumAbi from 'ethereumjs-abi';
 import EthereumCommon from 'ethereumjs-common';
 import * as BN from 'bn.js';
 import BigNumber from 'bignumber.js';
-import { BuildTransactionError, SigningError } from '../baseCoin/errors';
+import { BuildTransactionError, InvalidTransactionError, SigningError } from '../baseCoin/errors';
 import { TransactionType } from '../baseCoin';
 import {
   LockMethodId,
@@ -35,9 +36,24 @@ import {
   walletSimpleByteCode,
   walletSimpleConstructor,
 } from './walletUtil';
-import { testnetCommon } from './resources';
+import { testnetCommon, mainnetCommon } from './resources';
 import { EthTransactionData } from './types';
-import assert = require('assert');
+
+const commons: Map<NetworkType, EthereumCommon> = new Map<NetworkType, EthereumCommon>([
+  [NetworkType.MAINNET, mainnetCommon],
+  [NetworkType.TESTNET, testnetCommon],
+]);
+
+/**
+ * @param network
+ */
+export function getCommon(network: NetworkType): EthereumCommon {
+  const common = commons.get(network);
+  if (!common) {
+    throw new InvalidTransactionError('Missing network common configuration');
+  }
+  return common;
+}
 
 /**
  * Signs the transaction using the appropriate algorithm
@@ -56,7 +72,7 @@ export async function signInternal(
   if (!keyPair.getKeys().prv) {
     throw new SigningError('Missing private key');
   }
-  const ethTx = EthTransactionData.fromJson(transactionData);
+  const ethTx = EthTransactionData.fromJson(transactionData, customCommon);
   ethTx.sign(keyPair);
   return ethTx.toSerialized();
 }
@@ -273,32 +289,36 @@ export function decodeNativeTransferData(data: string): NativeTransferData {
  * Classify the given transaction data based as a transaction type.
  * ETH transactions are defined by the first 8 bytes of the transaction data, also known as the method id
  *
- * @param {string} data The data to classify the transactino with
+ * @param {string} data The data to classify the transaction with
  * @returns {TransactionType} The classified transaction type
  */
 export function classifyTransaction(data: string): TransactionType {
   if (data.startsWith(walletSimpleByteCode)) {
     return TransactionType.WalletInitialization;
-  } else if (data.startsWith(createForwarderMethodId)) {
-    return TransactionType.AddressInitialization;
-  } else if (data.startsWith(sendMultisigMethodId) || data.startsWith(sendMultisigTokenMethodId)) {
-    return TransactionType.Send;
-  } else if (data.startsWith(LockMethodId)) {
-    return TransactionType.StakingLock;
-  } else if (data.startsWith(UnlockMethodId)) {
-    return TransactionType.StakingUnlock;
-  } else if (data.startsWith(VoteMethodId)) {
-    return TransactionType.StakingVote;
-  } else if (data.startsWith(UnvoteMethodId)) {
-    return TransactionType.StakingUnvote;
-  } else if (data.startsWith(ActivateMethodId)) {
-    return TransactionType.StakingActivate;
-  } else if (data.startsWith(WithdrawMethodId)) {
-    return TransactionType.StakingWithdraw;
-  } else {
+  }
+
+  const transactionType = transactionTypesMap[data.slice(0, 10).toLowerCase()];
+  if (transactionType === undefined) {
     throw new BuildTransactionError(`Unrecognized transaction type: ${data}`);
   }
+
+  return transactionType;
 }
+
+/**
+ * A transaction types map according to the starting part of the encoded data
+ */
+const transactionTypesMap = {
+  [createForwarderMethodId]: TransactionType.AddressInitialization,
+  [sendMultisigMethodId]: TransactionType.Send,
+  [sendMultisigTokenMethodId]: TransactionType.Send,
+  [LockMethodId]: TransactionType.StakingLock,
+  [VoteMethodId]: TransactionType.StakingVote,
+  [ActivateMethodId]: TransactionType.StakingActivate,
+  [UnvoteMethodId]: TransactionType.StakingUnvote,
+  [UnlockMethodId]: TransactionType.StakingUnlock,
+  [WithdrawMethodId]: TransactionType.StakingWithdraw,
+};
 
 /**
  *

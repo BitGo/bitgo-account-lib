@@ -21,6 +21,8 @@ export enum TransactionType {
   StakingUnlock,
   // Withdraw
   StakingWithdraw,
+  // TODO: REMOVE
+  RandomChange,
 }
 
 /**
